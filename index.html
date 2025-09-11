@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI双人对话系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        /* 左侧配置栏 */
+        .config-panel {
+            width: 350px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .config-section {
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .config-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-textarea {
+            height: 60px;
+            resize: vertical;
+        }
+
+        .api-hint {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* 右侧对话栏 */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-ready {
+            background: #27ae60;
+        }
+
+        .status-running {
+            background: #f39c12;
+        }
+
+        .status-stopped {
+            background: #e74c3c;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message-a {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .message-b {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+            margin-left: auto;
+        }
+
+        /* 新增：loading消息样式 */
+        .message-loading {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            opacity: 0.8;
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .message-content {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .message-content h1, .message-content h2, .message-content h3 {
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+
+        .message-content h1 {
+            font-size: 20px;
+        }
+
+        .message-content h2 {
+            font-size: 18px;
+        }
+
+        .message-content h3 {
+            font-size: 16px;
+        }
+
+        .message-content p {
+            margin-bottom: 10px;
+        }
+
+        .message-content code {
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .message-content pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            background: white;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* 改进的loading动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* 新增：打字机效果的loading */
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            30% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .round-counter {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>    <div class="container">
+        <!-- 左侧配置栏 -->
+        <div class="config-panel">
+            <!-- AI A 配置 -->
+            <div class="config-section">
+                <div class="config-title">AI A 配置</div>
+                <div class="form-group">
+                    <label class="form-label">端点类型</label>
+                    <select class="form-select" id="endpointTypeA">
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API地址</label>
+                    <input type="text" class="form-input" id="apiUrlA" placeholder="API地址">
+                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API密钥</label>
+                    <input type="text" class="form-input" id="apiKeyA" placeholder="API密钥">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模型名称</label>
+                    <input type="text" class="form-input" id="modelA" placeholder="模型名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">提示词</label>
+                    <textarea class="form-textarea" id="promptA" placeholder="AI A的系统提示词"></textarea>
+                </div>
+            </div>
+
+            <!-- AI B 配置 -->
+            <div class="config-section">
+                <div class="config-title">AI B 配置</div>
+                <div class="form-group">
+                    <label class="form-label">端点类型</label>
+                    <select class="form-select" id="endpointTypeB">
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API地址</label>
+                    <input type="text" class="form-input" id="apiUrlB" placeholder="API地址">
+                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API密钥</label>
+                    <input type="text" class="form-input" id="apiKeyB" placeholder="API密钥">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模型名称</label>
+                    <input type="text" class="form-input" id="modelB" placeholder="模型名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">提示词</label>
+                    <textarea class="form-textarea" id="promptB" placeholder="AI B的系统提示词"></textarea>
+                </div>
+            </div>
+
+            <!-- 对话控制 -->
+            <div class="config-section">
+                <div class="config-title">对话控制</div>
+                <div class="form-group">
+                    <label class="form-label">最大轮次 (0=无限制)</label>
+                    <input type="number" class="form-input" id="maxRounds" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">上下文消息数量 (0=全部)</label>
+                    <input type="number" class="form-input" id="contextLimit" value="0" min="0">
+                    <div class="api-hint">限制每次API调用时发送的历史消息数量，可以减少Token消耗</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">重试次数</label>
+                    <input type="number" class="form-input" id="retryCount" value="3" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">重试间隔 (秒)</label>
+                    <input type="number" class="form-input" id="retryDelay" value="2" min="1">
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="config-section">
+                <div class="config-title">操作</div>
+                <button class="btn btn-primary" id="saveConfig">保存配置</button>
+                <button class="btn btn-success" id="startChat">开始对话</button>
+                <button class="btn btn-warning" id="pauseChat">暂停</button>
+                <button class="btn btn-success" id="resumeChat" style="display:none;">继续</button>
+                <button class="btn btn-danger" id="stopChat">停止</button>
+                <button class="btn btn-primary" id="exportChat">导出对话</button>
+                <button class="btn btn-danger" id="clearChat">清除对话</button>
+                <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
+            </div>
+        </div>
+
+        <!-- 右侧对话栏 -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-title">AI双人对话</div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="round-counter">轮次: <span id="roundCounter">0</span></div>
+                    <div class="status-indicator status-ready" id="statusIndicator">就绪</div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div style="text-align: center; color: #666; margin-top: 50px;">
+                    <h3>欢迎使用AI双人对话系统</h3>
+                    <p>请先配置AI参数，然后输入开场白开始对话</p>
+                </div>
+            </div>
+
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" class="input-field" id="openingMessage" placeholder="输入开场白，由AI A发起对话...">
+                    <button class="btn btn-primary" id="sendOpening">发起对话</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        class AIDialogueSystem {
+            constructor() {
+                this.conversations = [];
+                this.currentRound = 0;
+                this.maxRounds = 0;
+                this.contextLimit = 0; // 新增：上下文限制
+                this.isRunning = false;
+                this.isPaused = false;
+                this.retryCount = 3;
+                this.retryDelay = 2000;
+                this.currentRetries = 0;
+                this.needsReset = false;
+                this.openingMessage = '';
+                this.nextSpeaker = 'B';
+                // 新增：用于跟踪当前正在流式显示的消息
+                this.currentStreamingMessageId = null;
+
+                this.initializeElements();
+                this.loadConfiguration();
+                this.setupEventListeners();
+                this.updateUI();
+            }
+
+            initializeElements() {
+                // 配置元素
+                this.elements = {
+                    endpointTypeA: document.getElementById('endpointTypeA'),
+                    apiUrlA: document.getElementById('apiUrlA'),
+                    apiKeyA: document.getElementById('apiKeyA'),
+                    modelA: document.getElementById('modelA'),
+                    promptA: document.getElementById('promptA'),
+
+                    endpointTypeB: document.getElementById('endpointTypeB'),
+                    apiUrlB: document.getElementById('apiUrlB'),
+                    apiKeyB: document.getElementById('apiKeyB'),
+                    modelB: document.getElementById('modelB'),
+                    promptB: document.getElementById('promptB'),
+
+                    maxRounds: document.getElementById('maxRounds'),
+                    contextLimit: document.getElementById('contextLimit'), // 新增
+                    retryCount: document.getElementById('retryCount'),
+                    retryDelay: document.getElementById('retryDelay'),
+
+                    chatMessages: document.getElementById('chatMessages'),
+                    openingMessage: document.getElementById('openingMessage'),
+                    statusIndicator: document.getElementById('statusIndicator'),
+                    roundCounter: document.getElementById('roundCounter'),
+
+                    saveConfig: document.getElementById('saveConfig'),
+                    startChat: document.getElementById('startChat'),
+                    pauseChat: document.getElementById('pauseChat'),
+                    resumeChat: document.getElementById('resumeChat'),
+                    stopChat: document.getElementById('stopChat'),
+                    exportChat: document.getElementById('exportChat'),
+                    clearChat: document.getElementById('clearChat'),
+                    retryChat: document.getElementById('retryChat'),
+                    sendOpening: document.getElementById('sendOpening')
+                };
+            }
+
+            setupEventListeners() {
+                // 端点类型变化时更新默认值
+                this.elements.endpointTypeA.addEventListener('change', () => this.updateDefaults('A'));
+                this.elements.endpointTypeB.addEventListener('change', () => this.updateDefaults('B'));
+
+                // 按钮事件
+                this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
+                this.elements.startChat.addEventListener('click', () => this.startDialogue());
+                this.elements.pauseChat.addEventListener('click', () => this.pauseDialogue());
+                this.elements.resumeChat.addEventListener('click', () => this.resumeDialogue());
+                this.elements.stopChat.addEventListener('click', () => this.stopDialogue());
+                this.elements.exportChat.addEventListener('click', () => this.exportDialogue());
+                this.elements.clearChat.addEventListener('click', () => this.clearDialogue());
+                this.elements.retryChat.addEventListener('click', () => this.retryLastRequest());
+                this.elements.sendOpening.addEventListener('click', () => this.sendOpeningMessage());
+
+                // 回车发送
+                this.elements.openingMessage.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendOpeningMessage();
+                });
+            }
+
+            updateDefaults(aiType) {
+                const endpointType = this.elements[`endpointType${aiType}`].value;
+
+                if (endpointType === 'openai') {
+                    this.elements[`apiUrl${aiType}`].value = 'https://xxx.com';
+                    this.elements[`apiKey${aiType}`].value = 'sk-xxx';
+                    this.elements[`model${aiType}`].value = 'gpt-4';
+                } else if (endpointType === 'gemini') {
+                    this.elements[`apiUrl${aiType}`].value = 'https://generativelanguage.googleapis.com';
+                    this.elements[`apiKey${aiType}`].value = 'akxxx';
+                    this.elements[`model${aiType}`].value = 'gemini-2.5-pro';
+                }
+            }
+
+            loadConfiguration() {
+                const saved = localStorage.getItem('aiDialogueConfig');
+                if (saved) {
+                    const config = JSON.parse(saved);
+                    Object.keys(config).forEach(key => {
+                        if (this.elements[key]) {
+                            this.elements[key].value = config[key];
+                        }
+                    });
+                } else {
+                    // 设置默认值
+                    this.updateDefaults('A');
+                    this.updateDefaults('B');
+                }
+            }
+
+            saveConfiguration() {
+                const config = {};
+                Object.keys(this.elements).forEach(key => {
+                    if (this.elements[key].value !== undefined) {
+                        config[key] = this.elements[key].value;
+                    }
+                });
+                localStorage.setItem('aiDialogueConfig', JSON.stringify(config));
+                this.showMessage('配置已保存', 'success');
+            }
+
+            /**
+             * 添加或更新消息到UI，支持流式更新
+             * @param {string} speaker - 发言者
+             * @param {string} content - 消息内容
+             * @param {boolean} isStreaming - 是否为流式更新
+             * @param {string|null} messageId - 消息ID，用于更新现有消息
+             */
+            addMessageToUI(speaker, content, isStreaming = false, messageId = null) {
+                const messagesContainer = this.elements.chatMessages;
+
+                if (messageId) {
+                    // 更新现有消息
+                    const existingMessage = document.getElementById(messageId);
+                    if (existingMessage) {
+                        const contentElement = existingMessage.querySelector('.message-content');
+                        if (contentElement) {
+                            // 对于流式更新，直接设置文本，避免重复解析Markdown
+                            if (isStreaming) {
+                                contentElement.textContent = content;
+                            } else {
+                                // 最终完成时解析Markdown
+                                contentElement.innerHTML = marked.parse(content);
+                            }
+                        }
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        return messageId;
+                    }
+                }
+
+                // 创建新消息
+                const newMessageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const messageDiv = document.createElement('div');
+
+                const isAIB = speaker === 'AI B';
+                messageDiv.className = `message ${isAIB ? 'message-b' : 'message-a'}`;
+                messageDiv.id = newMessageId;
+
+                // 如果是loading状态，使用特殊样式
+                if (content === '[思考中...]' || content.includes('正在')) {
+                    messageDiv.classList.add('message-loading');
+                }
+
+                messageDiv.innerHTML = `<div class="message-header">${speaker}</div><div class="message-content">${isStreaming ? content : marked.parse(content)}</div>`;
+
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                return newMessageId;
+            }
+
+            /**
+             * 添加loading占位消息
+             * @param {string} speaker - 发言者
+             * @return {string} 消息ID
+             */
+            addLoadingMessage(speaker) {
+                const loadingContent = `
+                    <div class="typing-indicator">
+                        正在思考中
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+
+                const messageId = this.addMessageToUI(speaker, '', true);
+
+                // 直接设置loading内容到content区域
+                const messageElement = document.getElementById(messageId);
+                if (messageElement) {
+                    const contentElement = messageElement.querySelector('.message-content');
+                    if (contentElement) {
+                        contentElement.innerHTML = loadingContent;
+                    }
+                }
+
+                return messageId;
+            }
+
+            async startDialogue() {
+                if (!this.validateConfiguration()) return;
+
+                this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
+                this.contextLimit = parseInt(this.elements.contextLimit.value) || 0; // 新增
+                this.retryCount = parseInt(this.elements.retryCount.value) || 3;
+                this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
+
+                this.isRunning = true;
+                this.isPaused = false;
+                this.needsReset = false;
+                this.updateUI();
+
+                await this.runDialogue();
+            }
+
+            pauseDialogue() {
+                this.isPaused = true;
+                this.updateUI();
+            }
+
+            resumeDialogue() {
+                this.isPaused = false;
+                if (this.needsReset) {
+                    this.currentRound = 0;
+                    this.needsReset = false;
+                }
+
+                this.updateNextSpeaker();
+                this.updateUI();
+                this.runDialogue();
+            }
+
+            updateNextSpeaker() {
+                if (this.conversations.length === 0) {
+                    this.nextSpeaker = 'B';
+                    return;
+                }
+
+                const lastSpeaker = this.conversations[this.conversations.length - 1].speaker;
+
+                if (lastSpeaker === 'AI A') {
+                    this.nextSpeaker = 'B';
+                } else {
+                    this.nextSpeaker = 'A';
+                }
+            }
+
+            stopDialogue() {
+                this.isRunning = false;
+                this.isPaused = false;
+                // 清除当前流式消息ID
+                this.currentStreamingMessageId = null;
+                this.updateUI();
+            }
+
+            async sendOpeningMessage() {
+                const message = this.elements.openingMessage.value.trim();
+                if (!message) {
+                    this.showMessage('请输入开场白', 'error');
+                    return;
+                }
+
+                if (!this.validateConfiguration()) return;
+
+                // 清空之前的对话
+                this.conversations = [];
+                this.currentRound = 0;
+                this.openingMessage = message;
+                this.nextSpeaker = 'B';
+                this.currentStreamingMessageId = null;
+
+                this.elements.chatMessages.innerHTML = '';
+                this.elements.openingMessage.value = '';
+
+                // AI A 本地发出开场白（不调用API）
+                this.addMessageToUI('AI A', message);
+                this.conversations.push({
+                    role: 'assistant',
+                    content: message,
+                    speaker: 'AI A'
+                });
+
+                // 设置对话参数
+                this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
+                this.contextLimit = parseInt(this.elements.contextLimit.value) || 0; // 新增
+                this.retryCount = parseInt(this.elements.retryCount.value) || 3;
+                this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
+
+                // 直接开始对话，AI B 响应
+                this.isRunning = true;
+                this.isPaused = false;
+                this.needsReset = false;
+                this.updateUI();
+
+                await this.runDialogue();
+            }
+
+            async runDialogue() {
+                while (this.isRunning && !this.isPaused) {
+                    if (this.maxRounds > 0 && this.currentRound >= this.maxRounds) {
+                        this.isPaused = true;
+                        this.needsReset = true;
+                        this.updateUI();
+                        break;
+                    }
+
+                    const currentAI = this.nextSpeaker;
+                    const success = await this.callAI(currentAI);
+
+                    if (!success) {
+                        this.isPaused = true;
+                        this.updateUI();
+                        break;
+                    }
+
+                    this.currentRound++;
+                    this.updateRoundCounter();
+
+                    // 切换下一个发言者
+                    this.nextSpeaker = this.nextSpeaker === 'A' ? 'B' : 'A';
+
+                    // 添加延迟避免过快请求
+                    await this.sleep(1000);
+                }
+            }
+            // ====== 修复后的API调用方法 ======
+
+            async callAI(aiType) {
+                const config = this.getAIConfig(aiType);
+                const messages = this.buildMessages(aiType);
+
+                this.currentRetries = 0;
+
+                // 添加loading消息
+                const loadingMessageId = this.addLoadingMessage(`AI ${aiType}`);
+                this.currentStreamingMessageId = loadingMessageId;
+
+                while (this.currentRetries <= this.retryCount) {
+                    try {
+                        this.setStatus('运行中', 'running');
+                        const response = await this.makeAPIRequest(config, messages, `AI ${aiType}`, loadingMessageId);
+
+                        if (response && response.content) {
+                            // 流式响应在makeAPIRequest中已经实时更新了UI
+                            // 这里只需要添加到对话历史中
+                            this.conversations.push({
+                                role: 'assistant',
+                                content: response.content,
+                                speaker: `AI ${aiType}`
+                            });
+
+                            this.setStatus('就绪', 'ready');
+                            this.currentStreamingMessageId = null;
+                            return true;
+                        }
+
+                        throw new Error('响应内容为空');
+
+                    } catch (error) {
+                        console.error(`AI ${aiType} 调用失败:`, error);
+                        this.currentRetries++;
+
+                        if (this.currentRetries <= this.retryCount) {
+                            // 更新loading消息显示重试信息
+                            this.addMessageToUI(`AI ${aiType}`, `调用失败，${this.retryDelay/1000}秒后重试 (${this.currentRetries}/${this.retryCount})`, true, loadingMessageId);
+                            this.showMessage(`AI ${aiType} 调用失败，${this.retryDelay/1000}秒后重试 (${this.currentRetries}/${this.retryCount})`, 'error');
+                            await this.sleep(this.retryDelay);
+                        } else {
+                            // 重试次数用完，显示错误消息
+                            this.addMessageToUI(`AI ${aiType}`, `❌ 调用失败，已达重试上限: ${error.message}`, false, loadingMessageId);
+                            this.showMessage(`AI ${aiType} 调用失败，已达重试上限`, 'error');
+                            this.setStatus('错误', 'stopped');
+                            this.currentStreamingMessageId = null;
+                            return false;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            async makeAPIRequest(config, messages, speaker, messageId) {
+                if (config.endpointType === 'openai') {
+                    return await this.callOpenAI(config, messages, speaker, messageId);
+                } else if (config.endpointType === 'gemini') {
+                    return await this.callGemini(config, messages, speaker, messageId);
+                }
+            }
+
+            async callOpenAI(config, messages, speaker, messageId) {
+                const url = config.apiUrl.endsWith('/v1/chat/completions') ? 
+                    config.apiUrl : `${config.apiUrl}/v1/chat/completions`;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${config.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: config.model,
+                        messages: messages,
+                        stream: true,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await this.handleOpenAIStreamResponse(response, speaker, messageId);
+            }
+
+            async callGemini(config, messages, speaker, messageId) {
+                const url = `${config.apiUrl}/v1beta/models/${config.model}:streamGenerateContent?alt=sse&key=${config.apiKey}`;
+
+                // 转换消息格式为Gemini格式
+                const contents = messages.filter(m => m.role !== 'system').map(m => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }));
+
+                const systemInstruction = messages.find(m => m.role === 'system');
+                const requestBody = {
+                    contents: contents,
+                    generationConfig: {
+                        temperature: 0.7
+                    }
+                };
+
+                if (systemInstruction) {
+                    requestBody.systemInstruction = {
+                        parts: [{ text: systemInstruction.content }]
+                    };
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+                }
+
+                return await this.handleGeminiStreamResponse(response, speaker, messageId);
+            }
+
+            // 修复后的OpenAI流式响应处理
+            async handleOpenAIStreamResponse(response, speaker, messageId) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+                let isFirstChunk = true;
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6).trim();
+                                if (data === '[DONE]') continue;
+                                if (!data) continue;
+
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    const delta = parsed.choices?.[0]?.delta?.content;
+                                    if (delta) {
+                                        content += delta;
+
+                                        // 实时更新UI - 第一次更新时清除loading状态
+                                        if (isFirstChunk) {
+                                            // 移除loading样式
+                                            const messageElement = document.getElementById(messageId);
+                                            if (messageElement) {
+                                                messageElement.classList.remove('message-loading');
+                                            }
+                                            isFirstChunk = false;
+                                        }
+
+                                        // 实时更新消息内容
+                                        this.addMessageToUI(speaker, content, true, messageId);
+                                    }
+                                } catch (e) {
+                                    console.warn('解析OpenAI流式响应失败:', e, 'data:', data);
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    reader.releaseLock();
+                }
+
+                // 最终处理Markdown
+                if (content) {
+                    this.addMessageToUI(speaker, content, false, messageId);
+                }
+
+                return { content: content.trim() };
+            }
+
+            // 修复后的Gemini流式响应处理 - 这是关键修复
+            async handleGeminiStreamResponse(response, speaker, messageId) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+                let buffer = '';
+                let isFirstChunk = true;
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        buffer += chunk;
+
+                        // 按行分割处理
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || ''; // 保留最后一个可能不完整的行
+
+                        for (const line of lines) {
+                            if (line.trim() === '') continue;
+
+                            // Gemini的流式响应格式通常是直接的JSON，不需要data:前缀
+                            try {
+                                let jsonStr = line.trim();
+
+                                // 如果行以data:开头，去掉这个前缀
+                                if (jsonStr.startsWith('data: ')) {
+                                    jsonStr = jsonStr.substring(6);
+                                }
+
+                                if (!jsonStr || jsonStr === '[DONE]') continue;
+
+                                const parsed = JSON.parse(jsonStr);
+
+                                // Gemini API的标准响应结构
+                                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                                if (text) {
+                                    content += text;
+
+                                    // 实时更新UI - 第一次更新时清除loading状态
+                                    if (isFirstChunk) {
+                                        const messageElement = document.getElementById(messageId);
+                                        if (messageElement) {
+                                            messageElement.classList.remove('message-loading');
+                                        }
+                                        isFirstChunk = false;
+                                    }
+
+                                    // 实时更新消息内容
+                                    this.addMessageToUI(speaker, content, true, messageId);
+                                }
+                            } catch (e) {
+                                // 忽略JSON解析错误，继续处理下一行
+                                console.warn('解析Gemini流式响应失败:', e, 'line:', line);
+                            }
+                        }
+                    }
+
+                    // 处理buffer中剩余的内容
+                    if (buffer.trim()) {
+                        try {
+                            let jsonStr = buffer.trim();
+                            if (jsonStr.startsWith('data: ')) {
+                                jsonStr = jsonStr.substring(6);
+                            }
+
+                            if (jsonStr && jsonStr !== '[DONE]') {
+                                const parsed = JSON.parse(jsonStr);
+                                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                                if (text) {
+                                    content += text;
+                                    this.addMessageToUI(speaker, content, true, messageId);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('解析Gemini流式响应剩余内容失败:', e);
+                        }
+                    }
+
+                } finally {
+                    reader.releaseLock();
+                }
+
+                // 最终处理Markdown
+                if (content) {
+                    this.addMessageToUI(speaker, content, false, messageId);
+                } else {
+                    // 如果没有收到任何内容，显示错误信息
+                    this.addMessageToUI(speaker, '❌ 未收到响应内容', false, messageId);
+                    throw new Error('Gemini API未返回任何内容');
+                }
+
+                return { content: content.trim() };
+            }
+            // ====== 辅助方法和事件处理 ======
+
+            getAIConfig(aiType) {
+                return {
+                    endpointType: this.elements[`endpointType${aiType}`].value,
+                    apiUrl: this.elements[`apiUrl${aiType}`].value,
+                    apiKey: this.elements[`apiKey${aiType}`].value,
+                    model: this.elements[`model${aiType}`].value,
+                    prompt: this.elements[`prompt${aiType}`].value
+                };
+            }
+
+            /**
+             * 构建API请求的消息数组，支持上下文限制
+             * @param {string} aiType - AI类型 ('A' 或 'B')
+             * @returns {Array} 消息数组
+             */
+            buildMessages(aiType) {
+                const config = this.getAIConfig(aiType);
+                const messages = [];
+
+                // 添加系统提示词
+                if (config.prompt) {
+                    messages.push({
+                        role: 'system',
+                        content: config.prompt
+                    });
+                }
+
+                // 获取需要发送的对话历史
+                let conversationsToSend = this.conversations;
+
+                // 应用上下文限制
+                if (this.contextLimit > 0 && this.conversations.length > this.contextLimit) {
+                    // 取最近的 contextLimit 条消息
+                    conversationsToSend = this.conversations.slice(-this.contextLimit);
+                    
+                    // 在UI中显示上下文截断信息（仅在第一次截断时）
+                    if (this.conversations.length === this.contextLimit + 1) {
+                        this.addSystemMessage(`📋 启用上下文限制：仅使用最近 ${this.contextLimit} 条消息`, 'info');
+                    }
+                }
+
+                // 构建交替的用户/助手对话
+                // 从当前AI的角度看，对方都是user，自己是assistant
+                for (let i = 0; i < conversationsToSend.length; i++) {
+                    const conv = conversationsToSend[i];
+                    const speakerType = conv.speaker === `AI ${aiType}` ? 'assistant' : 'user';
+
+                    messages.push({
+                        role: speakerType,
+                        content: conv.content
+                    });
+                }
+
+                // 在控制台输出debug信息
+                console.log(`AI ${aiType} 发送消息数量: ${messages.length}`, {
+                    系统消息: messages.filter(m => m.role === 'system').length,
+                    对话消息: messages.filter(m => m.role !== 'system').length,
+                    总对话条数: this.conversations.length,
+                    发送对话条数: conversationsToSend.length,
+                    上下文限制: this.contextLimit || '无限制'
+                });
+
+                return messages;
+            }
+
+            validateConfiguration() {
+                const requiredFields = ['apiUrlA', 'apiKeyA', 'modelA', 'apiUrlB', 'apiKeyB', 'modelB'];
+
+                for (const field of requiredFields) {
+                    if (!this.elements[field].value.trim()) {
+                        this.showMessage(`请填写完整的配置信息: ${field}`, 'error');
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            setStatus(text, type) {
+                this.elements.statusIndicator.textContent = text;
+                this.elements.statusIndicator.className = `status-indicator status-${type}`;
+            }
+
+            updateRoundCounter() {
+                this.elements.roundCounter.textContent = this.currentRound;
+            }
+
+            updateUI() {
+                const isRunning = this.isRunning && !this.isPaused;
+                const isStopped = !this.isRunning;
+                const isPaused = this.isPaused;
+
+                this.elements.startChat.style.display = isStopped ? 'inline-block' : 'none';
+                this.elements.pauseChat.style.display = isRunning ? 'inline-block' : 'none';
+                this.elements.resumeChat.style.display = isPaused ? 'inline-block' : 'none';
+                this.elements.retryChat.style.display = isPaused ? 'inline-block' : 'none';
+
+                // 更新状态指示器
+                if (isRunning) {
+                    this.setStatus('运行中', 'running');
+                } else if (isPaused) {
+                    this.setStatus('暂停', 'stopped');
+                } else {
+                    this.setStatus('就绪', 'ready');
+                }
+            }
+
+            async retryLastRequest() {
+                if (this.isPaused) {
+                    // 重试时也需要更新下一个发言者
+                    this.updateNextSpeaker();
+                    this.resumeDialogue();
+                }
+            }
+
+            exportDialogue() {
+                let exportText = '# AI双人对话记录\n\n';
+                exportText += `导出时间: ${new Date().toLocaleString()}\n`;
+                exportText += `总轮次: ${this.currentRound}\n`;
+                exportText += `上下文限制: ${this.contextLimit || '无限制'}\n\n`;
+
+                this.conversations.forEach((conv, index) => {
+                    exportText += `## ${conv.speaker}\n\n${conv.content}\n\n`;
+                });
+
+                const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ai_dialogue_${new Date().getTime()}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            clearDialogue() {
+                if (confirm('确定要清除所有对话记录吗？')) {
+                    this.conversations = [];
+                    this.currentRound = 0;
+                    this.isRunning = false;
+                    this.isPaused = false;
+                    this.openingMessage = '';
+                    this.nextSpeaker = 'B';
+                    this.currentStreamingMessageId = null;
+
+                    this.elements.chatMessages.innerHTML = `
+                        <div style="text-align: center; color: #666; margin-top: 50px;">
+                            <h3>欢迎使用AI双人对话系统</h3>
+                            <p>请先配置AI参数，然后输入开场白开始对话</p>
+                        </div>
+                    `;
+
+                    this.updateRoundCounter();
+                    this.updateUI();
+                }
+            }
+
+            // 改进的消息显示方法
+            showMessage(message, type) {
+                // 在聊天界面显示消息而不是弹出框
+                if (type === 'error') {
+                    this.addSystemMessage(`❌ ${message}`, 'error');
+                } else if (type === 'success') {
+                    this.addSystemMessage(`✅ ${message}`, 'success');
+                } else {
+                    this.addSystemMessage(`ℹ️ ${message}`, 'info');
+                }
+            }
+
+            // 新增系统消息显示方法
+            addSystemMessage(message, type = 'info') {
+                const messagesContainer = this.elements.chatMessages;
+                const messageDiv = document.createElement('div');
+
+                const colorMap = {
+                    'error': '#e74c3c',
+                    'success': '#27ae60',
+                    'info': '#3498db'
+                };
+
+                messageDiv.style.cssText = `
+                    margin: 10px 0;
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    background: rgba(${type === 'error' ? '231, 76, 60' : type === 'success' ? '39, 174, 96' : '52, 152, 219'}, 0.1);
+                    border-left: 3px solid ${colorMap[type]};
+                    color: ${colorMap[type]};
+                    font-size: 13px;
+                    text-align: center;
+                `;
+
+                messageDiv.textContent = message;
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                // 5秒后自动移除系统消息
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 5000);
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // 初始化系统
+        document.addEventListener('DOMContentLoaded', () => {
+            new AIDialogueSystem();
+        });
+    </script>
+</body>
+</html>
