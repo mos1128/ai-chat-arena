@@ -345,11 +345,154 @@
             border-radius: 4px;
             font-size: 12px;
         }
+
+        /* 压缩消息样式 */
+        .message-compressed {
+            border-left-color: #f39c12 !important;
+            background: linear-gradient(90deg, #fff3cd 0%, #f8f9fa 100%) !important;
+        }
+
+        .compression-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 8px;
+            font-size: 11px;
+            color: #f39c12;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: rgba(243, 156, 18, 0.1);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            transition: all 0.2s;
+        }
+
+        .compression-indicator:hover {
+            background: rgba(243, 156, 18, 0.2);
+            transform: scale(1.05);
+        }
+
+        .compression-icon {
+            font-size: 12px;
+        }
+
+        /* 原始内容弹窗 */
+        .original-content-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 80%;
+            max-height: 80%;
+            z-index: 1000;
+            display: none;
+        }
+
+        .popup-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .popup-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .popup-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .popup-close:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .popup-content {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .original-message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            background: #f8f9fa;
+        }
+
+        .original-message-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .original-message-content {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .compression-stats {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #1976d2;
+        }
+
+
     </style>
 </head>
 <body>    <div class="container">
         <!-- 左侧配置栏 -->
         <div class="config-panel">
+            <!-- 操作按钮 -->
+            <div class="config-section">
+                <div class="config-title">操作</div>
+                <button class="btn btn-primary" id="saveConfig">保存配置</button>
+                <button class="btn btn-success" id="startChat">开始对话</button>
+                <button class="btn btn-warning" id="pauseChat">暂停</button>
+                <button class="btn btn-success" id="resumeChat" style="display:none;">继续</button>
+                <button class="btn btn-danger" id="stopChat">停止</button>
+                <button class="btn btn-primary" id="exportChat">导出对话</button>
+                <button class="btn btn-danger" id="clearChat">清除对话</button>
+                <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
+            </div>
+
             <!-- AI A 配置 -->
             <div class="config-section">
                 <div class="config-title">AI A 配置</div>
@@ -363,7 +506,7 @@
                 <div class="form-group">
                     <label class="form-label">API地址</label>
                     <input type="text" class="form-input" id="apiUrlA" placeholder="API地址">
-                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions</div>
+                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">API密钥</label>
@@ -392,7 +535,7 @@
                 <div class="form-group">
                     <label class="form-label">API地址</label>
                     <input type="text" class="form-input" id="apiUrlB" placeholder="API地址">
-                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions</div>
+                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">API密钥</label>
@@ -405,6 +548,35 @@
                 <div class="form-group">
                     <label class="form-label">提示词</label>
                     <textarea class="form-textarea" id="promptB" placeholder="AI B的系统提示词"></textarea>
+                </div>
+            </div>
+
+            <!-- 系统AI配置 -->
+            <div class="config-section">
+                <div class="config-title">系统AI配置 (用于压缩等功能)</div>
+                <div class="form-group">
+                    <label class="form-label">端点类型</label>
+                    <select class="form-select" id="endpointTypeSystem">
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API地址</label>
+                    <input type="text" class="form-input" id="apiUrlSystem" placeholder="API地址">
+                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API密钥</label>
+                    <input type="text" class="form-input" id="apiKeySystem" placeholder="API密钥">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模型名称</label>
+                    <input type="text" class="form-input" id="modelSystem" placeholder="模型名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">提示词</label>
+                    <textarea class="form-textarea" id="promptSystem" placeholder="系统AI的压缩提示词"></textarea>
                 </div>
             </div>
 
@@ -421,6 +593,26 @@
                     <div class="api-hint">限制每次API调用时发送的历史消息数量，可以减少Token消耗</div>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="enableCompression" style="margin-right: 8px;">
+                        启用AI智能上下文压缩
+                    </label>
+                    <div class="api-hint">使用系统AI自动压缩历史对话以减少Token消耗，保留关键信息</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">压缩强度</label>
+                    <select class="form-select" id="compressionRatio">
+                        <option value="0.3">轻度压缩 (保留70%内容)</option>
+                        <option value="0.5" selected>中度压缩 (保留50%内容)</option>
+                        <option value="0.7">重度压缩 (保留30%内容)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">不压缩条数</label>
+                    <input type="number" class="form-input" id="keepRecentCount" value="5" min="0" max="20">
+                    <div class="api-hint">最近的X条消息不参与压缩，保持完整上下文</div>
+                </div>
+                <div class="form-group">
                     <label class="form-label">重试次数</label>
                     <input type="number" class="form-input" id="retryCount" value="3" min="0">
                 </div>
@@ -430,17 +622,12 @@
                 </div>
             </div>
 
-            <!-- 操作按钮 -->
-            <div class="config-section">
-                <div class="config-title">操作</div>
-                <button class="btn btn-primary" id="saveConfig">保存配置</button>
-                <button class="btn btn-success" id="startChat">开始对话</button>
-                <button class="btn btn-warning" id="pauseChat">暂停</button>
-                <button class="btn btn-success" id="resumeChat" style="display:none;">继续</button>
-                <button class="btn btn-danger" id="stopChat">停止</button>
-                <button class="btn btn-primary" id="exportChat">导出对话</button>
-                <button class="btn btn-danger" id="clearChat">清除对话</button>
-                <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
+            <!-- 压缩统计 -->
+            <div class="config-section" id="compressionStatsSection" style="display:none;">
+                <div class="config-title">压缩统计</div>
+                <div id="compressionStats" style="font-size: 12px; color: #666; line-height: 1.5;">
+                    暂无压缩数据
+                </div>
             </div>
         </div>
 
@@ -486,11 +673,35 @@
                 this.nextSpeaker = 'B';
                 // 新增：用于跟踪当前正在流式显示的消息
                 this.currentStreamingMessageId = null;
+                
+                // 新增：跟踪每个AI当前的端点类型
+                this.currentEndpointTypes = {
+                    'A': 'openai',
+                    'B': 'openai', 
+                    'System': 'openai'
+                };
+                
+                // ====== 上下文压缩功能相关属性 ======
+                this.enableCompression = false; // 是否启用压缩
+                this.compressionRatio = 0.5; // 压缩比率 (0.1-0.9)
+                this.keepRecentCount = 5; // 最近X条消息不压缩
+                this.compressedMessages = []; // 存储压缩后的消息摘要
+                this.compressionCache = new Map(); // 压缩缓存，key为消息内容hash，value为压缩结果
+                this.lastCompressionIndex = 0; // 上次压缩到的消息索引
+                this.compressionStats = { // 压缩统计信息
+                    originalTokens: 0,
+                    compressedTokens: 0,
+                    compressionCount: 0,
+                    aiCompressionTokens: 0 // AI压缩消耗的Token
+                };
 
                 this.initializeElements();
                 this.loadConfiguration();
                 this.setupEventListeners();
                 this.updateUI();
+                
+                // 设置全局引用以便在onclick中访问
+                window.aiDialogue = this;
             }
 
             initializeElements() {
@@ -508,8 +719,17 @@
                     modelB: document.getElementById('modelB'),
                     promptB: document.getElementById('promptB'),
 
+                    endpointTypeSystem: document.getElementById('endpointTypeSystem'),
+                    apiUrlSystem: document.getElementById('apiUrlSystem'),
+                    apiKeySystem: document.getElementById('apiKeySystem'),
+                    modelSystem: document.getElementById('modelSystem'),
+                    promptSystem: document.getElementById('promptSystem'),
+
                     maxRounds: document.getElementById('maxRounds'),
                     contextLimit: document.getElementById('contextLimit'), // 新增
+                    enableCompression: document.getElementById('enableCompression'),
+                    compressionRatio: document.getElementById('compressionRatio'),
+                    keepRecentCount: document.getElementById('keepRecentCount'),
                     retryCount: document.getElementById('retryCount'),
                     retryDelay: document.getElementById('retryDelay'),
 
@@ -531,9 +751,13 @@
             }
 
             setupEventListeners() {
-                // 端点类型变化时更新默认值
-                this.elements.endpointTypeA.addEventListener('change', () => this.updateDefaults('A'));
-                this.elements.endpointTypeB.addEventListener('change', () => this.updateDefaults('B'));
+                // 端点类型变化时切换配置
+                this.elements.endpointTypeA.addEventListener('change', (e) => this.switchEndpointConfig('A', e));
+                this.elements.endpointTypeB.addEventListener('change', (e) => this.switchEndpointConfig('B', e));
+                this.elements.endpointTypeSystem.addEventListener('change', (e) => this.switchEndpointConfig('System', e));
+                
+                // 压缩功能相关事件
+                this.elements.enableCompression.addEventListener('change', () => this.updateCompressionStatsUI());
 
                 // 按钮事件
                 this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
@@ -552,17 +776,166 @@
                 });
             }
 
-            updateDefaults(aiType) {
+            /**
+             * 切换端点配置（保存当前配置，加载目标端点配置）
+             * @param {string} aiType - AI类型 ('A', 'B', 'System')
+             * @param {Event} event - 切换事件
+             */
+            switchEndpointConfig(aiType, event) {
+                const newEndpointType = event.target.value;
+                const previousEndpointType = this.currentEndpointTypes[aiType];
+                
+                console.log(`${aiType}: 从 ${previousEndpointType} 切换到 ${newEndpointType}`);
+                
+                // 如果端点类型没有变化，不需要切换
+                if (previousEndpointType === newEndpointType) {
+                    return;
+                }
+                
+                // 先保存当前显示的配置到切换前的端点类型
+                this.saveCurrentEndpointConfigToType(aiType, previousEndpointType);
+                
+                // 更新当前端点类型跟踪
+                this.currentEndpointTypes[aiType] = newEndpointType;
+                
+                // 然后加载新端点的配置
+                this.loadEndpointConfig(aiType);
+            }
+
+            /**
+             * 保存当前端点的配置
+             * @param {string} aiType - AI类型
+             */
+            saveCurrentEndpointConfig(aiType) {
+                // 获取当前的端点类型和配置
+                const currentEndpointType = this.elements[`endpointType${aiType}`].value;
+                this.saveCurrentEndpointConfigToType(aiType, currentEndpointType);
+            }
+
+            /**
+             * 保存当前显示的配置到指定的端点类型
+             * @param {string} aiType - AI类型
+             * @param {string} endpointType - 端点类型
+             */
+            saveCurrentEndpointConfigToType(aiType, endpointType) {
+                const currentConfig = {
+                    apiUrl: this.elements[`apiUrl${aiType}`].value,
+                    apiKey: this.elements[`apiKey${aiType}`].value,
+                    model: this.elements[`model${aiType}`].value,
+                    prompt: this.elements[`prompt${aiType}`].value
+                };
+
+                // 只有在有实际配置内容时才保存
+                if (currentConfig.apiUrl.trim() || currentConfig.apiKey.trim() || currentConfig.model.trim()) {
+                    const endpointConfigs = this.getEndpointConfigs();
+                    if (!endpointConfigs[aiType]) {
+                        endpointConfigs[aiType] = {};
+                    }
+                    endpointConfigs[aiType][endpointType] = currentConfig;
+                    this.saveEndpointConfigs(endpointConfigs);
+                    
+                    console.log(`保存 ${aiType} 的 ${endpointType} 配置:`, currentConfig);
+                }
+            }
+
+            /**
+             * 加载指定端点的配置
+             * @param {string} aiType - AI类型
+             */
+            loadEndpointConfig(aiType) {
+                const targetEndpointType = this.elements[`endpointType${aiType}`].value;
+                const endpointConfigs = this.getEndpointConfigs();
+                
+                // 尝试加载已保存的配置
+                const savedConfig = endpointConfigs[aiType]?.[targetEndpointType];
+                
+                if (savedConfig) {
+                    // 加载已保存的配置
+                    this.elements[`apiUrl${aiType}`].value = savedConfig.apiUrl || '';
+                    this.elements[`apiKey${aiType}`].value = savedConfig.apiKey || '';
+                    this.elements[`model${aiType}`].value = savedConfig.model || '';
+                    this.elements[`prompt${aiType}`].value = savedConfig.prompt || '';
+                    
+                    console.log(`加载 ${aiType} 的 ${targetEndpointType} 已保存配置:`, savedConfig);
+                } else {
+                    // 没有保存的配置，使用默认值
+                    this.updateDefaults(aiType, true);
+                    console.log(`${aiType} 的 ${targetEndpointType} 没有保存的配置，使用默认值`);
+                }
+            }
+
+            /**
+             * 获取端点配置
+             * @returns {Object} 端点配置对象
+             */
+            getEndpointConfigs() {
+                const saved = localStorage.getItem('aiDialogueEndpointConfigs');
+                return saved ? JSON.parse(saved) : {};
+            }
+
+            /**
+             * 保存端点配置
+             * @param {Object} configs - 端点配置对象
+             */
+            saveEndpointConfigs(configs) {
+                localStorage.setItem('aiDialogueEndpointConfigs', JSON.stringify(configs));
+            }
+
+            updateDefaults(aiType, forceUpdate = false) {
                 const endpointType = this.elements[`endpointType${aiType}`].value;
 
                 if (endpointType === 'openai') {
-                    this.elements[`apiUrl${aiType}`].value = 'https://xxx.com';
-                    this.elements[`apiKey${aiType}`].value = 'sk-xxx';
-                    this.elements[`model${aiType}`].value = 'gpt-4';
+                    if (aiType === 'System') {
+                        // 系统AI使用低成本模型
+                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
+                            this.elements[`apiUrl${aiType}`].value = 'https://xxx.com';
+                        }
+                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
+                            this.elements[`apiKey${aiType}`].value = 'sk-xxx';
+                        }
+                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
+                            this.elements[`model${aiType}`].value = 'gpt-3.5-turbo';
+                        }
+                        if (forceUpdate || !this.elements[`prompt${aiType}`].value.trim()) {
+                            this.elements[`prompt${aiType}`].value = this.getDefaultCompressionPromptTemplate();
+                        }
+                    } else {
+                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
+                            this.elements[`apiUrl${aiType}`].value = 'https://xxx.com';
+                        }
+                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
+                            this.elements[`apiKey${aiType}`].value = 'sk-xxx';
+                        }
+                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
+                            this.elements[`model${aiType}`].value = 'gpt-4';
+                        }
+                    }
                 } else if (endpointType === 'gemini') {
-                    this.elements[`apiUrl${aiType}`].value = 'https://generativelanguage.googleapis.com';
-                    this.elements[`apiKey${aiType}`].value = 'akxxx';
-                    this.elements[`model${aiType}`].value = 'gemini-2.5-pro';
+                    if (aiType === 'System') {
+                        // 系统AI使用低成本模型
+                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
+                            this.elements[`apiUrl${aiType}`].value = 'https://generativelanguage.googleapis.com';
+                        }
+                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
+                            this.elements[`apiKey${aiType}`].value = 'akxxx';
+                        }
+                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
+                            this.elements[`model${aiType}`].value = 'gemini-1.5-flash';
+                        }
+                        if (forceUpdate || !this.elements[`prompt${aiType}`].value.trim()) {
+                            this.elements[`prompt${aiType}`].value = this.getDefaultCompressionPromptTemplate();
+                        }
+                    } else {
+                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
+                            this.elements[`apiUrl${aiType}`].value = 'https://generativelanguage.googleapis.com';
+                        }
+                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
+                            this.elements[`apiKey${aiType}`].value = 'akxxx';
+                        }
+                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
+                            this.elements[`model${aiType}`].value = 'gemini-2.5-pro';
+                        }
+                    }
                 }
             }
 
@@ -572,21 +945,59 @@
                     const config = JSON.parse(saved);
                     Object.keys(config).forEach(key => {
                         if (this.elements[key]) {
-                            this.elements[key].value = config[key];
+                            if (this.elements[key].type === 'checkbox') {
+                                this.elements[key].checked = config[key];
+                            } else {
+                                this.elements[key].value = config[key];
+                            }
                         }
                     });
+                    
+                    // 初始化端点类型跟踪
+                    ['A', 'B', 'System'].forEach(aiType => {
+                        this.currentEndpointTypes[aiType] = this.elements[`endpointType${aiType}`].value;
+                    });
+                    
+                    // 加载完通用配置后，为每个AI加载对应端点的配置
+                    ['A', 'B', 'System'].forEach(aiType => {
+                        this.loadEndpointConfig(aiType);
+                    });
+                    
+                    // 确保系统AI提示词有默认值（如果为空的话）
+                    if (!this.elements.promptSystem.value.trim()) {
+                        this.elements.promptSystem.value = this.getDefaultCompressionPromptTemplate();
+                    }
                 } else {
-                    // 设置默认值
-                    this.updateDefaults('A');
-                    this.updateDefaults('B');
+                    // 初始化端点类型跟踪为默认值
+                    ['A', 'B', 'System'].forEach(aiType => {
+                        this.currentEndpointTypes[aiType] = this.elements[`endpointType${aiType}`].value;
+                    });
+                    
+                    // 设置默认值（不强制更新，只在字段为空时设置）
+                    this.updateDefaults('A', false);
+                    this.updateDefaults('B', false);
+                    this.updateDefaults('System', false);
                 }
+                
+                // 更新压缩统计UI
+                this.updateCompressionStatsUI();
             }
 
             saveConfiguration() {
+                // 保存当前所有端点的配置
+                ['A', 'B', 'System'].forEach(aiType => {
+                    this.saveCurrentEndpointConfig(aiType);
+                });
+
+                // 保存通用配置
                 const config = {};
                 Object.keys(this.elements).forEach(key => {
-                    if (this.elements[key].value !== undefined) {
-                        config[key] = this.elements[key].value;
+                    if (this.elements[key]) {
+                        if (this.elements[key].type === 'checkbox') {
+                            config[key] = this.elements[key].checked;
+                        } else if (this.elements[key].value !== undefined) {
+                            config[key] = this.elements[key].value;
+                        }
                     }
                 });
                 localStorage.setItem('aiDialogueConfig', JSON.stringify(config));
@@ -594,13 +1005,14 @@
             }
 
             /**
-             * 添加或更新消息到UI，支持流式更新
+             * 添加或更新消息到UI，支持流式更新和压缩消息显示
              * @param {string} speaker - 发言者
              * @param {string} content - 消息内容
              * @param {boolean} isStreaming - 是否为流式更新
              * @param {string|null} messageId - 消息ID，用于更新现有消息
+             * @param {Object|null} messageData - 完整的消息数据（包含压缩信息）
              */
-            addMessageToUI(speaker, content, isStreaming = false, messageId = null) {
+            addMessageToUI(speaker, content, isStreaming = false, messageId = null, messageData = null) {
                 const messagesContainer = this.elements.chatMessages;
 
                 if (messageId) {
@@ -635,7 +1047,50 @@
                     messageDiv.classList.add('message-loading');
                 }
 
-                messageDiv.innerHTML = `<div class="message-header">${speaker}</div><div class="message-content">${isStreaming ? content : marked.parse(content)}</div>`;
+                // 检查是否应该跳过显示（如果这条消息已经被压缩到摘要中）
+                if (this.shouldSkipMessage(speaker, content)) {
+                    // 不显示这条消息，因为它已经被包含在压缩摘要中
+                    return null;
+                }
+
+                // 检查消息是否被压缩（从conversations数组中查找）
+                const isCompressedMessage = messageData && messageData.isCompressed && messageData.compressedContent;
+                
+                // 构建消息头部（包含压缩指示器）
+                let headerHTML = `<div class="message-header">${speaker}`;
+                if (isCompressedMessage) {
+                    // 为压缩消息添加压缩图标（但消息内容仍显示完整版本）
+                    const originalLength = this.estimateTokens(messageData.content);
+                    const compressedLength = this.estimateTokens(messageData.compressedContent);
+                    const ratio = originalLength > 0 ? 
+                        Math.round(((originalLength - compressedLength) / originalLength) * 100) : 0;
+                    
+                    headerHTML += `<span class="compression-indicator" onclick="window.aiDialogue.showCompressedContent('${newMessageId}')" title="点击查看压缩后的内容">
+                        <span class="compression-icon">🗜️</span>
+                        <span>已压缩 ${ratio}%</span>
+                    </span>`;
+                }
+                headerHTML += `</div>`;
+
+                // 构建消息内容
+                const contentHTML = `<div class="message-content">${isStreaming ? content : marked.parse(content)}</div>`;
+                
+                messageDiv.innerHTML = headerHTML + contentHTML;
+
+                // 如果是压缩消息，存储压缩相关数据
+                if (isCompressedMessage && messageData.compressedContent) {
+                    const originalLength = this.estimateTokens(messageData.content);
+                    const compressedLength = this.estimateTokens(messageData.compressedContent);
+                    
+                    messageDiv.setAttribute('data-compressed-content', messageData.compressedContent);
+                    messageDiv.setAttribute('data-compression-stats', JSON.stringify({
+                        originalLength: originalLength,
+                        compressedLength: compressedLength,
+                        savedLength: originalLength - compressedLength,
+                        ratio: `${Math.round(((originalLength - compressedLength) / originalLength) * 100)}%`,
+                        compressionIndex: messageData.compressionIndex
+                    }));
+                }
 
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -677,6 +1132,9 @@
 
                 this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
                 this.contextLimit = parseInt(this.elements.contextLimit.value) || 0; // 新增
+                this.enableCompression = this.elements.enableCompression.checked;
+                this.compressionRatio = parseFloat(this.elements.compressionRatio.value) || 0.5;
+                this.keepRecentCount = parseInt(this.elements.keepRecentCount.value) || 5;
                 this.retryCount = parseInt(this.elements.retryCount.value) || 3;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
@@ -758,6 +1216,9 @@
                 // 设置对话参数
                 this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
                 this.contextLimit = parseInt(this.elements.contextLimit.value) || 0; // 新增
+                this.enableCompression = this.elements.enableCompression.checked;
+                this.compressionRatio = parseFloat(this.elements.compressionRatio.value) || 0.5;
+                this.keepRecentCount = parseInt(this.elements.keepRecentCount.value) || 5;
                 this.retryCount = parseInt(this.elements.retryCount.value) || 3;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
@@ -797,12 +1258,35 @@
                     // 添加延迟避免过快请求
                     await this.sleep(1000);
                 }
+                
+                // 对话结束后，更新所有消息的压缩图标显示
+                this.updateAllCompressionIcons();
+            }
+
+            /**
+             * 更新所有消息的压缩图标显示
+             */
+            updateAllCompressionIcons() {
+                console.log('🔄 开始更新所有压缩图标...');
+                let compressedCount = 0;
+                
+                this.conversations.forEach((conv, index) => {
+                    if (conv.isCompressed && conv.compressedContent) {
+                        compressedCount++;
+                        console.log(`📝 发现压缩消息 ${index}: ${conv.speaker}`);
+                        setTimeout(() => {
+                            this.updateMessageCompressionIcon(index);
+                        }, index * 50); // 错开执行时间
+                    }
+                });
+                
+                console.log(`📊 总共找到 ${compressedCount} 条压缩消息`);
             }
             // ====== 修复后的API调用方法 ======
 
             async callAI(aiType) {
                 const config = this.getAIConfig(aiType);
-                const messages = this.buildMessages(aiType);
+                const messages = await this.buildMessages(aiType);
 
                 this.currentRetries = 0;
 
@@ -823,6 +1307,12 @@
                                 content: response.content,
                                 speaker: `AI ${aiType}`
                             });
+
+                            // 在新消息添加后，检查并更新压缩图标
+                            setTimeout(() => {
+                                console.log('🆕 新消息添加完成，更新压缩图标');
+                                this.updateAllCompressionIcons();
+                            }, 500);
 
                             this.setStatus('就绪', 'ready');
                             this.currentStreamingMessageId = null;
@@ -863,8 +1353,15 @@
             }
 
             async callOpenAI(config, messages, speaker, messageId) {
-                const url = config.apiUrl.endsWith('/v1/chat/completions') ? 
-                    config.apiUrl : `${config.apiUrl}/v1/chat/completions`;
+                // 修复：如果URL以#结尾，强制使用输入地址；否则自动补全
+                let url;
+                if (config.apiUrl.endsWith('#')) {
+                    url = config.apiUrl.slice(0, -1); // 去掉末尾的#
+                } else if (config.apiUrl.endsWith('/v1/chat/completions')) {
+                    url = config.apiUrl;
+                } else {
+                    url = `${config.apiUrl}/v1/chat/completions`;
+                }
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -1098,7 +1595,7 @@
              * @param {string} aiType - AI类型 ('A' 或 'B')
              * @returns {Array} 消息数组
              */
-            buildMessages(aiType) {
+            async buildMessages(aiType) {
                 const config = this.getAIConfig(aiType);
                 const messages = [];
 
@@ -1113,10 +1610,15 @@
                 // 获取需要发送的对话历史
                 let conversationsToSend = this.conversations;
 
-                // 应用上下文限制
-                if (this.contextLimit > 0 && this.conversations.length > this.contextLimit) {
+                // 首先应用智能压缩（如果启用）
+                if (this.enableCompression && conversationsToSend.length > this.keepRecentCount) {
+                    conversationsToSend = await this.compressConversations([...conversationsToSend]);
+                }
+
+                // 然后应用上下文限制
+                if (this.contextLimit > 0 && conversationsToSend.length > this.contextLimit) {
                     // 取最近的 contextLimit 条消息
-                    conversationsToSend = this.conversations.slice(-this.contextLimit);
+                    conversationsToSend = conversationsToSend.slice(-this.contextLimit);
                     
                     // 在UI中显示上下文截断信息（仅在第一次截断时）
                     if (this.conversations.length === this.contextLimit + 1) {
@@ -1142,7 +1644,10 @@
                     对话消息: messages.filter(m => m.role !== 'system').length,
                     总对话条数: this.conversations.length,
                     发送对话条数: conversationsToSend.length,
-                    上下文限制: this.contextLimit || '无限制'
+                    上下文限制: this.contextLimit || '无限制',
+                    AI智能压缩: this.enableCompression ? '已启用' : '未启用',
+                    保护最近消息: this.keepRecentCount,
+                    压缩统计: this.compressionStats
                 });
 
                 return messages;
@@ -1155,6 +1660,17 @@
                     if (!this.elements[field].value.trim()) {
                         this.showMessage(`请填写完整的配置信息: ${field}`, 'error');
                         return false;
+                    }
+                }
+
+                // 如果启用AI压缩，验证系统AI配置
+                if (this.enableCompression) {
+                    const systemFields = ['apiUrlSystem', 'apiKeySystem', 'modelSystem'];
+                    for (const field of systemFields) {
+                        if (!this.elements[field].value.trim()) {
+                            this.showMessage(`AI压缩需要完整的系统AI配置: ${field}`, 'error');
+                            return false;
+                        }
                     }
                 }
 
@@ -1202,7 +1718,21 @@
                 let exportText = '# AI双人对话记录\n\n';
                 exportText += `导出时间: ${new Date().toLocaleString()}\n`;
                 exportText += `总轮次: ${this.currentRound}\n`;
-                exportText += `上下文限制: ${this.contextLimit || '无限制'}\n\n`;
+                exportText += `上下文限制: ${this.contextLimit || '无限制'}\n`;
+                exportText += `AI智能压缩: ${this.enableCompression ? '已启用' : '未启用'}\n`;
+                if (this.enableCompression) {
+                    exportText += `压缩强度: ${(this.compressionRatio * 100).toFixed(0)}%\n`;
+                    exportText += `保护最近: ${this.keepRecentCount}条消息\n`;
+                    if (this.compressionStats.compressionCount > 0) {
+                        const totalSaved = this.compressionStats.originalTokens - this.compressionStats.compressedTokens;
+                        const savedPercentage = ((totalSaved / this.compressionStats.originalTokens) * 100).toFixed(1);
+                        const netSaved = totalSaved - this.compressionStats.aiCompressionTokens;
+                        exportText += `Token节省: ${totalSaved} (${savedPercentage}%)\n`;
+                        exportText += `AI压缩成本: ${this.compressionStats.aiCompressionTokens} tokens\n`;
+                        exportText += `净节省: ${netSaved} tokens\n`;
+                    }
+                }
+                exportText += '\n';
 
                 this.conversations.forEach((conv, index) => {
                     exportText += `## ${conv.speaker}\n\n${conv.content}\n\n`;
@@ -1226,6 +1756,17 @@
                     this.openingMessage = '';
                     this.nextSpeaker = 'B';
                     this.currentStreamingMessageId = null;
+                    
+                    // 重置压缩统计和缓存
+                    this.compressedMessages = [];
+                    this.compressionCache.clear();
+                    this.lastCompressionIndex = 0;
+                    this.compressionStats = {
+                        originalTokens: 0,
+                        compressedTokens: 0,
+                        compressionCount: 0,
+                        aiCompressionTokens: 0
+                    };
 
                     this.elements.chatMessages.innerHTML = `
                         <div style="text-align: center; color: #666; margin-top: 50px;">
@@ -1236,6 +1777,7 @@
 
                     this.updateRoundCounter();
                     this.updateUI();
+                    this.updateCompressionStatsUI();
                 }
             }
 
@@ -1287,6 +1829,1282 @@
 
             sleep(ms) {
                 return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            /**
+             * 检查是否应该跳过显示这条消息（因为已被压缩到摘要中）
+             * @param {string} speaker - 发言者
+             * @param {string} content - 消息内容
+             * @returns {boolean} 是否应该跳过显示
+             */
+            shouldSkipMessage(speaker, content) {
+                // 检查conversations数组中是否有压缩摘要消息包含这条原始消息
+                const compressedMessage = this.conversations.find(conv => 
+                    (conv.aiCompressed || conv.batchCompressed) &&
+                    conv.originalMessages &&
+                    conv.originalMessages.some(orig => 
+                        orig.speaker === speaker && orig.content === content
+                    )
+                );
+                
+                return !!compressedMessage;
+            }
+
+            /**
+             * 获取消息的压缩信息（基于原始消息查找对应的压缩消息）
+             * @param {string} speaker - 发言者
+             * @param {string} content - 消息内容
+             * @param {Object} messageData - 消息数据
+             * @returns {Object} 压缩信息
+             */
+            getCompressionInfoForMessage(speaker, content, messageData) {
+                // 查找包含这条原始消息的压缩消息
+                const compressedMessage = this.conversations.find(conv => 
+                    (conv.aiCompressed || conv.batchCompressed) &&
+                    conv.originalMessages &&
+                    conv.originalMessages.some(orig => 
+                        orig.speaker === speaker && orig.content === content
+                    )
+                );
+                
+                if (!compressedMessage) {
+                    return { ratio: '0%', originalLength: 0, compressedLength: 0 };
+                }
+                
+                const originalLength = compressedMessage.originalLength || 0;
+                const compressedLength = compressedMessage.compressedLength || 0;
+                const savedLength = originalLength - compressedLength;
+                const ratio = originalLength > 0 ? Math.round((savedLength / originalLength) * 100) : 0;
+                
+                return {
+                    originalLength,
+                    compressedLength,
+                    savedLength,
+                    ratio: `${ratio}%`,
+                    batchSize: compressedMessage.batchSize || 1,
+                    compressionLevel: compressedMessage.compressionLevel || 0.5,
+                    compressedContent: compressedMessage.compressedContent || compressedMessage.content
+                };
+            }
+
+            /**
+             * 获取压缩后的内容（基于原始消息查找）
+             * @param {string} speaker - 发言者
+             * @param {string} content - 消息内容
+             * @param {Object} messageData - 消息数据
+             * @returns {string} 压缩后的内容
+             */
+            getCompressedContentForMessage(speaker, content, messageData) {
+                // 查找包含这条原始消息的压缩消息
+                const compressedMessage = this.conversations.find(conv => 
+                    (conv.aiCompressed || conv.batchCompressed) &&
+                    conv.originalMessages &&
+                    conv.originalMessages.some(orig => 
+                        orig.speaker === speaker && orig.content === content
+                    )
+                );
+                
+                return compressedMessage?.compressedContent || compressedMessage?.content || null;
+            }
+
+            /**
+             * 显示压缩后的内容
+             * @param {string} messageId - 消息ID
+             */
+            showCompressedContent(messageId) {
+                const messageElement = document.getElementById(messageId);
+                if (!messageElement) return;
+
+                const compressedContent = messageElement.getAttribute('data-compressed-content');
+                const compressionStatsData = messageElement.getAttribute('data-compression-stats');
+                
+                if (!compressedContent) {
+                    this.showMessage('未找到压缩内容', 'error');
+                    return;
+                }
+
+                try {
+                    const compressionStats = JSON.parse(compressionStatsData || '{}');
+                    
+                    // 获取原始消息内容
+                    const originalContent = messageElement.querySelector('.message-content').textContent;
+                    
+                    this.createCompressedContentPopup(originalContent, compressedContent, compressionStats);
+                } catch (error) {
+                    console.error('解析压缩数据失败:', error);
+                    this.showMessage('压缩数据格式错误', 'error');
+                }
+            }
+
+            /**
+             * 创建压缩内容对比弹窗
+             * @param {string} originalContent - 原始内容
+             * @param {string} compressedContent - 压缩内容
+             * @param {Object} compressionStats - 压缩统计
+             */
+            createCompressedContentPopup(originalContent, compressedContent, compressionStats) {
+                // 移除现有弹窗
+                this.closeOriginalMessagesPopup();
+
+                // 创建遮罩层
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                overlay.onclick = () => this.closeOriginalMessagesPopup();
+
+                // 创建弹窗
+                const popup = document.createElement('div');
+                popup.className = 'original-content-popup';
+                popup.id = 'originalMessagesPopup';
+                popup.style.maxWidth = '90%';
+
+                // 弹窗头部
+                const header = document.createElement('div');
+                header.className = 'popup-header';
+                header.innerHTML = `
+                    <h3 class="popup-title">压缩内容对比</h3>
+                    <button class="popup-close" onclick="window.aiDialogue.closeOriginalMessagesPopup()">×</button>
+                `;
+
+                // 弹窗内容
+                const content = document.createElement('div');
+                content.className = 'popup-content';
+                content.innerHTML = `
+                    <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <h4 style="color: #2c3e50; margin-bottom: 10px;">📄 原始内容</h4>
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db; max-height: 300px; overflow-y: auto;">
+                                ${marked.parse(originalContent)}
+                            </div>
+                        </div>
+                        <div style="flex: 1;">
+                            <h4 style="color: #e67e22; margin-bottom: 10px;">🗜️ 压缩内容</h4>
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #f39c12; max-height: 300px; overflow-y: auto;">
+                                ${marked.parse(compressedContent)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 显示压缩统计
+                if (compressionStats.originalLength) {
+                    const statsDiv = document.createElement('div');
+                    statsDiv.className = 'compression-stats';
+                    statsDiv.innerHTML = `
+                        <strong>📊 压缩统计：</strong><br>
+                        原始长度: ${compressionStats.originalLength} tokens<br>
+                        压缩后长度: ${compressionStats.compressedLength} tokens<br>
+                        节省空间: ${compressionStats.savedLength} tokens (${compressionStats.ratio})<br>
+                        <em>注：UI中显示完整内容，API调用时使用压缩内容</em>
+                    `;
+                    content.appendChild(statsDiv);
+                }
+
+                popup.appendChild(header);
+                popup.appendChild(content);
+
+                document.body.appendChild(overlay);
+                document.body.appendChild(popup);
+
+                // 显示弹窗
+                setTimeout(() => {
+                    overlay.style.display = 'block';
+                    popup.style.display = 'block';
+                }, 10);
+
+                // ESC键关闭
+                const handleEsc = (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeOriginalMessagesPopup();
+                        document.removeEventListener('keydown', handleEsc);
+                    }
+                };
+                document.addEventListener('keydown', handleEsc);
+            }
+
+            /**
+             * 显示原始消息弹窗
+             * @param {string} messageId - 消息ID
+             */
+            showOriginalMessages(messageId) {
+                const messageElement = document.getElementById(messageId);
+                if (!messageElement) return;
+
+                const originalMessagesData = messageElement.getAttribute('data-original-messages');
+                const compressionStatsData = messageElement.getAttribute('data-compression-stats');
+                const contextMessagesData = messageElement.getAttribute('data-context-messages');
+                
+                if (!originalMessagesData) {
+                    this.showMessage('未找到原始消息数据', 'error');
+                    return;
+                }
+
+                try {
+                    const originalMessages = JSON.parse(originalMessagesData);
+                    const compressionStats = JSON.parse(compressionStatsData || '{}');
+                    const contextMessages = contextMessagesData ? JSON.parse(contextMessagesData) : null;
+                    
+                    this.createOriginalMessagesPopup(originalMessages, compressionStats, contextMessages);
+                } catch (error) {
+                    console.error('解析原始消息数据失败:', error);
+                    this.showMessage('原始消息数据格式错误', 'error');
+                }
+            }
+
+            /**
+             * 创建原始消息弹窗
+             * @param {Array} originalMessages - 原始消息数组
+             * @param {Object} compressionStats - 压缩统计
+             * @param {Array} contextMessages - 上下文消息数组（可选）
+             */
+            createOriginalMessagesPopup(originalMessages, compressionStats, contextMessages = null) {
+                // 移除现有弹窗
+                this.closeOriginalMessagesPopup();
+
+                // 创建遮罩层
+                const overlay = document.createElement('div');
+                overlay.className = 'popup-overlay';
+                overlay.onclick = () => this.closeOriginalMessagesPopup();
+
+                // 创建弹窗
+                const popup = document.createElement('div');
+                popup.className = 'original-content-popup';
+                popup.id = 'originalMessagesPopup';
+
+                // 弹窗头部
+                const header = document.createElement('div');
+                header.className = 'popup-header';
+                const totalMessages = originalMessages.length + (contextMessages ? contextMessages.length : 0);
+                header.innerHTML = `
+                    <h3 class="popup-title">压缩相关消息 (${totalMessages}条${contextMessages ? '，含' + contextMessages.length + '条上下文' : ''})</h3>
+                    <button class="popup-close" onclick="window.aiDialogue.closeOriginalMessagesPopup()">×</button>
+                `;
+
+                // 弹窗内容
+                const content = document.createElement('div');
+                content.className = 'popup-content';
+
+                // 显示上下文消息（如果有）
+                if (contextMessages && contextMessages.length > 0) {
+                    const contextTitle = document.createElement('div');
+                    contextTitle.innerHTML = '<h4 style="color: #666; margin: 15px 0 10px 0;">📖 上下文消息（用于理解语境）</h4>';
+                    content.appendChild(contextTitle);
+                    
+                    contextMessages.forEach((msg, index) => {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = 'original-message';
+                        msgDiv.style.opacity = '0.7';
+                        msgDiv.innerHTML = `
+                            <div class="original-message-header">${msg.speaker} (上下文 ${index + 1})</div>
+                            <div class="original-message-content">${marked.parse(msg.content)}</div>
+                        `;
+                        content.appendChild(msgDiv);
+                    });
+                }
+
+                // 显示原始消息（被压缩的目标消息）
+                if (contextMessages && contextMessages.length > 0) {
+                    const originalTitle = document.createElement('div');
+                    originalTitle.innerHTML = '<h4 style="color: #e74c3c; margin: 15px 0 10px 0;">🎯 被压缩的目标消息</h4>';
+                    content.appendChild(originalTitle);
+                }
+
+                originalMessages.forEach((msg, index) => {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'original-message';
+                    if (contextMessages && contextMessages.length > 0) {
+                        msgDiv.style.borderLeft = '4px solid #e74c3c';
+                    }
+                    msgDiv.innerHTML = `
+                        <div class="original-message-header">${msg.speaker} ${contextMessages ? '(目标消息)' : '(第' + (index + 1) + '条)'}</div>
+                        <div class="original-message-content">${marked.parse(msg.content)}</div>
+                    `;
+                    content.appendChild(msgDiv);
+                });
+
+                // 显示压缩统计
+                if (compressionStats.originalLength) {
+                    const statsDiv = document.createElement('div');
+                    statsDiv.className = 'compression-stats';
+                    const compressionType = compressionStats.batchSize > 1 ? '批量压缩' : '单条压缩';
+                    statsDiv.innerHTML = `
+                        <strong>📊 压缩统计：</strong><br>
+                        压缩方式: ${compressionType}<br>
+                        原始长度: ${compressionStats.originalLength} 字符<br>
+                        压缩后长度: ${compressionStats.compressedLength} 字符<br>
+                        节省空间: ${compressionStats.savedLength} 字符 (${compressionStats.ratio})<br>
+                        ${compressionStats.batchSize > 1 ? '合并消息数: ' + compressionStats.batchSize + ' 条' : ''}
+                    `;
+                    content.appendChild(statsDiv);
+                }
+
+                popup.appendChild(header);
+                popup.appendChild(content);
+
+                document.body.appendChild(overlay);
+                document.body.appendChild(popup);
+
+                // 显示弹窗
+                setTimeout(() => {
+                    overlay.style.display = 'block';
+                    popup.style.display = 'block';
+                }, 10);
+
+                // ESC键关闭
+                const handleEsc = (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeOriginalMessagesPopup();
+                        document.removeEventListener('keydown', handleEsc);
+                    }
+                };
+                document.addEventListener('keydown', handleEsc);
+            }
+
+            /**
+             * 关闭原始消息弹窗
+             */
+            closeOriginalMessagesPopup() {
+                const overlay = document.querySelector('.popup-overlay');
+                const popup = document.getElementById('originalMessagesPopup');
+                
+                if (overlay) overlay.remove();
+                if (popup) popup.remove();
+            }
+
+            /**
+             * 重新渲染所有消息（包括压缩消息的可视化）
+             */
+            rerenderAllMessages() {
+                const messagesContainer = this.elements.chatMessages;
+                messagesContainer.innerHTML = '';
+
+                this.conversations.forEach((conv, index) => {
+                    // 始终显示完整消息内容，但传递压缩信息用于显示图标
+                    const messageId = this.addMessageToUI(conv.speaker, conv.content, false, null, conv);
+                });
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            /**
+             * 更新消息的压缩图标显示
+             * @param {number} messageIndex - 消息在conversations数组中的索引
+             */
+            updateMessageCompressionIcon(messageIndex) {
+                if (messageIndex < 0 || messageIndex >= this.conversations.length) return;
+                
+                const conv = this.conversations[messageIndex];
+                if (!conv.isCompressed || !conv.compressedContent) return;
+                
+                console.log(`🔍 尝试为消息 ${messageIndex} 添加压缩图标:`, conv.speaker);
+                
+                // 查找对应的消息元素（通过位置和发言者匹配）
+                const messageElements = document.querySelectorAll('.message');
+                let targetElement = null;
+                let matchCount = 0;
+                
+                // 先按发言者筛选，然后按位置匹配
+                for (let i = 0; i < messageElements.length; i++) {
+                    const element = messageElements[i];
+                    const headerElement = element.querySelector('.message-header');
+                    
+                    if (headerElement) {
+                        const headerText = headerElement.textContent.trim();
+                        
+                        // 检查发言者是否匹配
+                        if (headerText.includes(conv.speaker)) {
+                            // 如果这是第messageIndex个匹配的元素，就是我们要找的
+                            let speakerMatchIndex = 0;
+                            for (let j = 0; j < this.conversations.length; j++) {
+                                if (this.conversations[j].speaker === conv.speaker) {
+                                    if (j === messageIndex) {
+                                        break;
+                                    }
+                                    speakerMatchIndex++;
+                                }
+                            }
+                            
+                            if (matchCount === speakerMatchIndex) {
+                                targetElement = element;
+                                break;
+                            }
+                            matchCount++;
+                        }
+                    }
+                }
+                
+                if (targetElement) {
+                    const headerElement = targetElement.querySelector('.message-header');
+                    
+                    // 检查是否已经有压缩图标
+                    if (!headerElement.querySelector('.compression-indicator')) {
+                        console.log(`✅ 为消息 ${messageIndex} 添加压缩图标`);
+                        
+                        // 添加压缩图标
+                        const originalLength = this.estimateTokens(conv.content);
+                        const compressedLength = this.estimateTokens(conv.compressedContent);
+                        const ratio = originalLength > 0 ? 
+                            Math.round(((originalLength - compressedLength) / originalLength) * 100) : 0;
+                        
+                        const compressionIndicator = document.createElement('span');
+                        compressionIndicator.className = 'compression-indicator';
+                        compressionIndicator.onclick = () => this.showCompressedContent(targetElement.id);
+                        compressionIndicator.title = '点击查看压缩后的内容';
+                        compressionIndicator.innerHTML = `
+                            <span class="compression-icon">🗜️</span>
+                            <span>已压缩 ${ratio}%</span>
+                        `;
+                        
+                        headerElement.appendChild(compressionIndicator);
+                        
+                        // 存储压缩相关数据
+                        targetElement.setAttribute('data-compressed-content', conv.compressedContent);
+                        targetElement.setAttribute('data-compression-stats', JSON.stringify({
+                            originalLength: originalLength,
+                            compressedLength: compressedLength,
+                            savedLength: originalLength - compressedLength,
+                            ratio: `${ratio}%`,
+                            compressionIndex: conv.compressionIndex
+                        }));
+                    } else {
+                        console.log(`⚠️ 消息 ${messageIndex} 已有压缩图标，跳过`);
+                    }
+                } else {
+                    console.warn(`❌ 未找到消息 ${messageIndex} 对应的DOM元素:`, conv.speaker);
+                }
+            }
+
+            // ====== 上下文压缩功能核心方法 ======
+
+            /**
+             * 获取默认的压缩提示词模板
+             * @returns {string} 默认提示词模板
+             */
+            getDefaultCompressionPromptTemplate() {
+                return `你是一个专业的对话压缩助手。你的任务是将AI对话历史进行智能压缩，减少约{compressionRatio}%的内容长度，同时最大程度保留关键信息。
+
+## 压缩原则：
+1. **保留核心信息**：保持对话的主要观点、结论和重要细节
+2. **维持逻辑连贯**：确保压缩后的对话逻辑清晰，上下文连贯
+3. **删除冗余**：去除重复、啰嗦、无关紧要的内容
+4. **保持语气**：尽量保持原有的对话语气和风格
+5. **关键词保留**：保留专业术语、重要概念和关键词汇
+
+## 压缩策略：
+- 合并相似观点
+- 简化冗长表述
+- 删除客套话和过渡词
+- 保留数字、时间、专有名词等关键数据
+- 对于较新的消息（最近3-5条），压缩程度要轻一些
+
+## 输出格式：
+请按以下JSON格式输出压缩结果：
+\`\`\`json
+{
+  "compressed_messages": [
+    {
+      "speaker": "AI A",
+      "content": "压缩后的消息内容"
+    },
+    {
+      "speaker": "AI B", 
+      "content": "压缩后的消息内容"
+    }
+  ],
+  "compression_summary": {
+    "original_count": 原始消息数量,
+    "compressed_count": 压缩后消息数量,
+    "key_points": ["保留的关键信息点1", "关键信息点2"],
+    "removed_elements": ["删除的内容类型1", "删除的内容类型2"]
+  }
+}
+\`\`\`
+
+现在请压缩以下对话历史：`;
+            }
+
+            /**
+             * 获取AI压缩的系统提示词
+             * @param {number} compressionRatio - 压缩比率
+             * @returns {string} 压缩提示词
+             */
+            getCompressionPrompt(compressionRatio) {
+                const targetReduction = Math.round(compressionRatio * 100);
+                let template = this.elements.promptSystem.value.trim();
+                
+                // 如果用户没有设置自定义模板，使用默认模板
+                if (!template) {
+                    template = this.getDefaultCompressionPromptTemplate();
+                }
+                
+                // 替换变量
+                return template.replace(/\{compressionRatio\}/g, targetReduction);
+            }
+
+            /**
+             * 估算文本的Token数量（简化版本）
+             * @param {string} text - 要估算的文本
+             * @returns {number} 估算的Token数量
+             */
+            estimateTokens(text) {
+                if (!text) return 0;
+                // 简化的Token估算：中文字符约1.5个token，英文单词约1个token
+                const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+                const englishWords = (text.match(/[a-zA-Z]+/g) || []).length;
+                const otherChars = text.length - chineseChars - englishWords;
+                return Math.ceil(chineseChars * 1.5 + englishWords + otherChars * 0.5);
+            }
+
+
+
+            /**
+             * AI智能压缩对话历史（单条消息压缩机制）
+             * @param {Array} conversations - 对话历史数组
+             * @returns {Array} 用于API的对话数组（包含压缩内容）
+             */
+            async compressConversations(conversations) {
+                if (!this.enableCompression || conversations.length <= this.keepRecentCount) {
+                    return conversations;
+                }
+                
+                const totalCount = conversations.length;
+                
+                // 计算需要压缩的消息位置（从后往前数第keepRecentCount+1条）
+                const targetCompressIndex = totalCount - this.keepRecentCount - 1;
+                
+                // 如果目标压缩位置无效或已经压缩过，构建API用的对话数组
+                if (targetCompressIndex < 0) {
+                    return conversations;
+                }
+                
+                // 检查是否需要压缩新消息
+                if (targetCompressIndex >= this.lastCompressionIndex) {
+                    // 需要压缩新消息
+                    const targetMessage = conversations[targetCompressIndex];
+                    const cacheKey = this.getMessageCacheKey(targetMessage, targetCompressIndex);
+                    
+                    if (!this.compressionCache.has(cacheKey)) {
+                        // 确定压缩时的上下文范围（包含目标消息在内的最近3条，使用完整消息）
+                        const contextSize = 3;
+                        const contextStart = Math.max(0, targetCompressIndex - contextSize + 1);
+                        const contextMessages = conversations.slice(contextStart, targetCompressIndex + 1);
+                        
+                        console.log(`🗜️ 压缩消息位置 ${targetCompressIndex}，上下文范围 ${contextStart}-${targetCompressIndex} (${contextMessages.length}条)`);
+                        
+                        try {
+                            // 压缩目标消息，携带上下文（使用完整消息）
+                            const compressedContent = await this.compressTargetMessage(
+                                targetMessage, 
+                                contextMessages, 
+                                targetCompressIndex
+                            );
+                            
+                            // 存入压缩缓存（只存储压缩后的内容，不是完整消息对象）
+                            this.compressionCache.set(cacheKey, compressedContent);
+                            
+                            // 更新压缩索引
+                            this.lastCompressionIndex = targetCompressIndex + 1;
+                            
+                            // 标记原消息已被压缩（用于UI显示）
+                            conversations[targetCompressIndex].isCompressed = true;
+                            conversations[targetCompressIndex].compressedContent = compressedContent;
+                            conversations[targetCompressIndex].compressionIndex = targetCompressIndex;
+                            
+                            // 立即更新UI显示压缩图标（延迟执行确保DOM已更新）
+                            setTimeout(() => {
+                                this.updateMessageCompressionIcon(targetCompressIndex);
+                            }, 200);
+                            
+                        } catch (error) {
+                            console.error('压缩失败:', error);
+                            this.showCompressionError(error, 1);
+                        }
+                    } else {
+                        // 使用缓存的压缩结果
+                        const cachedCompressed = this.compressionCache.get(cacheKey);
+                        conversations[targetCompressIndex].isCompressed = true;
+                        conversations[targetCompressIndex].compressedContent = cachedCompressed;
+                        conversations[targetCompressIndex].compressionIndex = targetCompressIndex;
+                        
+                        // 立即更新UI显示压缩图标（延迟执行确保DOM已更新）
+                        setTimeout(() => {
+                            this.updateMessageCompressionIcon(targetCompressIndex);
+                        }, 200);
+                        
+                        console.log(`✅ 使用缓存，跳过压缩位置 ${targetCompressIndex}`);
+                    }
+                }
+                
+                // 构建用于API的对话数组（使用压缩内容）
+                return this.buildAPIConversations(conversations);
+            }
+
+            /**
+             * 构建用于API的对话数组（使用压缩内容）
+             * @param {Array} conversations - 原始对话数组
+             * @returns {Array} 用于API的对话数组
+             */
+            buildAPIConversations(conversations) {
+                const totalCount = conversations.length;
+                const result = [];
+                
+                for (let i = 0; i < totalCount; i++) {
+                    const conv = conversations[i];
+                    
+                    // 判断是否应该使用压缩内容
+                    const shouldUseCompressed = conv.isCompressed && 
+                                               i < (totalCount - this.keepRecentCount) && // 不在保护范围内
+                                               conv.compressedContent; // 有压缩内容
+                    
+                    if (shouldUseCompressed) {
+                        // 使用压缩内容
+                        result.push({
+                            role: conv.role,
+                            content: conv.compressedContent,
+                            speaker: conv.speaker,
+                            isFromCompression: true
+                        });
+                    } else {
+                        // 使用完整内容
+                        result.push({
+                            role: conv.role,
+                            content: conv.content,
+                            speaker: conv.speaker
+                        });
+                    }
+                }
+                
+                return result;
+            }
+
+            /**
+             * 压缩目标消息（携带上下文）
+             * @param {Object} targetMessage - 目标消息
+             * @param {Array} contextMessages - 上下文消息数组（包含目标消息）
+             * @param {number} targetIndex - 目标消息在原数组中的索引
+             * @returns {string} 压缩后的内容
+             */
+            async compressTargetMessage(targetMessage, contextMessages, targetIndex) {
+                try {
+                    // 计算原始Token数量
+                    const originalTokenCount = this.estimateTokens(targetMessage.content);
+                    
+                    // 构建压缩请求
+                    const compressionPrompt = this.getCompressionPrompt(this.compressionRatio);
+                    
+                    // 构建上下文文本（用于AI理解上下文，使用完整消息）
+                    const contextText = contextMessages.map((msg, idx) => {
+                        const isTarget = msg === targetMessage;
+                        const prefix = isTarget ? '【目标消息】' : '【上下文】';
+                        // 始终使用完整内容作为压缩上下文
+                        return `${prefix}${msg.speaker}: ${msg.content}`;
+                    }).join('\n\n');
+                    
+                    const messages = [
+                        { role: 'system', content: compressionPrompt },
+                        { 
+                            role: 'user', 
+                            content: `请压缩下面标记为【目标消息】的内容，其他【上下文】消息仅用于理解语境，不需要压缩：\n\n${contextText}\n\n请只返回目标消息的压缩版本。` 
+                        }
+                    ];
+                    
+                    // 显示压缩进行中的提示
+                    this.addSystemMessage(`🤖 AI正在压缩第${targetIndex + 1}条消息 (携带${contextMessages.length}条上下文)...`, 'info');
+                    
+                    // 使用统一的AI调用逻辑（带重试）
+                    const systemConfig = this.getAIConfig('System');
+                    const response = await this.callAIWithRetry('System', systemConfig, messages);
+                    
+                    if (!response || !response.content) {
+                        throw new Error('AI压缩响应为空');
+                    }
+                    
+                    // 解析AI返回的压缩结果
+                    const compressedResult = this.parseCompressionResult(response.content);
+                    
+                    if (!compressedResult || !compressedResult.compressed_messages || compressedResult.compressed_messages.length === 0) {
+                        throw new Error('AI压缩结果解析失败');
+                    }
+                    
+                    // 获取压缩后的内容
+                    const compressedContent = compressedResult.compressed_messages[0].content;
+                    
+                    // 计算压缩统计
+                    const compressedTokenCount = this.estimateTokens(compressedContent);
+                    const aiCompressionCost = this.estimateTokens(compressionPrompt) + 
+                                            this.estimateTokens(contextText) + 
+                                            this.estimateTokens(response.content);
+                    
+                    // 更新压缩统计
+                    this.compressionStats.originalTokens += originalTokenCount;
+                    this.compressionStats.compressedTokens += compressedTokenCount;
+                    this.compressionStats.aiCompressionTokens += aiCompressionCost;
+                    this.compressionStats.compressionCount++;
+                    
+                    const savedTokens = originalTokenCount - compressedTokenCount;
+                    const savedPercentage = ((savedTokens / originalTokenCount) * 100).toFixed(1);
+                    
+                    // 显示压缩统计信息
+                    this.addSystemMessage(
+                        `🤖 压缩完成：第${targetIndex + 1}条消息，节省 ${savedTokens} tokens (${savedPercentage}%)`, 
+                        'info'
+                    );
+                    
+                    // 强制更新压缩图标（延迟执行）
+                    setTimeout(() => {
+                        console.log(`🔧 强制更新消息 ${targetIndex} 的压缩图标`);
+                        this.updateMessageCompressionIcon(targetIndex);
+                    }, 1000);
+                    
+                    // 更新压缩统计UI
+                    this.updateCompressionStatsUI();
+                    
+                    // 返回压缩后的内容字符串
+                    return compressedContent;
+                    
+                } catch (error) {
+                    console.error('目标消息压缩失败:', error);
+                    throw error;
+                }
+            }
+
+            /**
+             * 批量压缩一组消息（多条消息压缩为一条）- 保留用于向后兼容
+             * @param {Array} messageBatch - 消息批次（多条消息）
+             * @returns {Array} 压缩后的消息数组（只有一条消息）
+             */
+            async compressMessageBatch(messageBatch) {
+                if (!messageBatch || messageBatch.length === 0) {
+                    return [];
+                }
+                
+                // 生成批次缓存key（基于所有消息的组合内容）
+                const batchCacheKey = this.getBatchCacheKey(messageBatch);
+                
+                // 检查批次缓存
+                if (this.compressionCache.has(batchCacheKey)) {
+                    console.log(`✅ 使用批次缓存，跳过压缩 (${messageBatch.length}条消息)`);
+                    return this.compressionCache.get(batchCacheKey);
+                }
+                
+                try {
+                    // 计算原始Token数量
+                    const originalTokenCount = messageBatch.reduce((sum, conv) => 
+                        sum + this.estimateTokens(conv.content), 0);
+                    
+                    // 构建压缩请求
+                    const compressionPrompt = this.getCompressionPrompt(this.compressionRatio);
+                    const conversationText = messageBatch.map(conv => 
+                        `${conv.speaker}: ${conv.content}`
+                    ).join('\n\n');
+                    
+                    const messages = [
+                        { role: 'system', content: compressionPrompt },
+                        { 
+                            role: 'user', 
+                            content: `请将以下${messageBatch.length}条连续对话压缩为一条摘要消息，保持对话的核心内容和逻辑：\n\n${conversationText}` 
+                        }
+                    ];
+                    
+                    // 显示压缩进行中的提示
+                    this.addSystemMessage(`🤖 AI正在将${messageBatch.length}条对话压缩为1条摘要...`, 'info');
+                    
+                    // 使用统一的AI调用逻辑（带重试）
+                    const systemConfig = this.getAIConfig('System');
+                    const response = await this.callAIWithRetry('System', systemConfig, messages);
+                    
+                    if (!response || !response.content) {
+                        throw new Error('AI批量压缩响应为空');
+                    }
+                    
+                    // 解析AI返回的压缩结果
+                    const compressedResult = this.parseCompressionResult(response.content);
+                    
+                    if (!compressedResult || !compressedResult.compressed_messages || compressedResult.compressed_messages.length === 0) {
+                        throw new Error('AI批量压缩结果解析失败');
+                    }
+                    
+                    // 创建一条压缩摘要消息（合并多条消息为一条）
+                    const firstMessage = compressedResult.compressed_messages[0];
+                    const compressedMessage = {
+                        role: 'assistant',
+                        content: firstMessage.content, // 这是压缩后的内容，会显示在界面上
+                        speaker: `压缩摘要 (${messageBatch.length}条消息)`,
+                        originalLength: originalTokenCount,
+                        compressedLength: this.estimateTokens(firstMessage.content),
+                        compressionLevel: this.compressionRatio,
+                        aiCompressed: true,
+                        batchCompressed: true,
+                        batchSize: messageBatch.length,
+                        originalMessages: messageBatch.map(m => ({
+                            speaker: m.speaker,
+                            content: m.content,
+                            originalLength: m.content.length
+                        })),
+                        compressedContent: firstMessage.content // 存储压缩后的内容
+                    };
+                    
+                    // 存入批次缓存
+                    this.compressionCache.set(batchCacheKey, [compressedMessage]);
+                    
+                    // 计算压缩统计
+                    const compressedTokenCount = this.estimateTokens(firstMessage.content);
+                    const aiCompressionCost = this.estimateTokens(compressionPrompt) + 
+                                            this.estimateTokens(conversationText) + 
+                                            this.estimateTokens(response.content);
+                    
+                    // 更新压缩统计
+                    this.compressionStats.originalTokens += originalTokenCount;
+                    this.compressionStats.compressedTokens += compressedTokenCount;
+                    this.compressionStats.aiCompressionTokens += aiCompressionCost;
+                    this.compressionStats.compressionCount++;
+                    
+                    const savedTokens = originalTokenCount - compressedTokenCount;
+                    const netSavedTokens = savedTokens - aiCompressionCost;
+                    const savedPercentage = ((savedTokens / originalTokenCount) * 100).toFixed(1);
+                    
+                    // 显示批量压缩统计信息
+                    this.addSystemMessage(
+                        `🤖 压缩完成：${messageBatch.length}条消息→1条摘要，节省 ${savedTokens} tokens (${savedPercentage}%)`, 
+                        'info'
+                    );
+                    
+                    // 更新压缩统计UI
+                    this.updateCompressionStatsUI();
+                    
+                    return [compressedMessage];
+                    
+                } catch (error) {
+                    console.error('批量压缩失败:', error);
+                    
+                    // 显示详细的错误信息
+                    this.showCompressionError(error, messageBatch.length);
+                    
+                    // 批量压缩失败，返回原始消息
+                    this.addSystemMessage(`❌ 批量压缩失败，保持原始${messageBatch.length}条消息不压缩`, 'error');
+                    return messageBatch;
+                }
+            }
+
+            /**
+             * 生成批次缓存key
+             * @param {Array} messageBatch - 消息批次
+             * @returns {string} 批次缓存key
+             */
+            getBatchCacheKey(messageBatch) {
+                // 将批次中所有消息的内容组合生成hash
+                const batchContent = messageBatch.map(msg => `${msg.speaker}:${msg.content}`).join('|');
+                const hash = batchContent.split('').reduce((a, b) => {
+                    a = ((a << 5) - a) + b.charCodeAt(0);
+                    return a & a;
+                }, 0);
+                return `batch_${messageBatch.length}_${hash.toString()}`;
+            }
+
+            /**
+             * 获取缓存的压缩对话
+             * @param {Array} conversations - 对话历史数组
+             * @returns {Array} 缓存的压缩结果
+             */
+            getCachedCompressedConversations(conversations) {
+                // 如果没有缓存，则返回原始对话
+                if (this.compressionCache.size === 0) {
+                    return conversations;
+                }
+                
+                return conversations.map(conv => {
+                    const cacheKey = this.getMessageCacheKey(conv);
+                    return this.compressionCache.get(cacheKey) || conv;
+                });
+            }
+
+            /**
+             * 生成消息的缓存key
+             * @param {Object} message - 消息对象
+             * @param {number} index - 消息在数组中的索引（可选）
+             * @returns {string} 缓存key
+             */
+            getMessageCacheKey(message, index = null) {
+                // 使用消息内容、发言者和位置生成hash
+                const content = `${message.speaker}:${message.content}${index !== null ? ':' + index : ''}`;
+                const hash = content.split('').reduce((a, b) => {
+                    a = ((a << 5) - a) + b.charCodeAt(0);
+                    return a & a;
+                }, 0);
+                return hash.toString();
+            }
+
+
+
+
+
+            /**
+             * 解析AI压缩结果
+             * @param {string} content - AI返回的内容
+             * @returns {Object} 解析后的压缩结果
+             */
+            parseCompressionResult(content) {
+                if (!content || typeof content !== 'string') {
+                    throw new Error('AI响应内容为空或格式不正确');
+                }
+
+                try {
+                    // 尝试提取JSON内容（优先级从高到低）
+                    let jsonStr = null;
+                    
+                    // 1. 标准的```json```格式
+                    const jsonCodeBlock = content.match(/```json\s*([\s\S]*?)\s*```/);
+                    if (jsonCodeBlock) {
+                        jsonStr = jsonCodeBlock[1];
+                    }
+                    
+                    // 2. 普通的```代码块格式  
+                    if (!jsonStr) {
+                        const codeBlock = content.match(/```\s*([\s\S]*?)\s*```/);
+                        if (codeBlock && codeBlock[1].trim().startsWith('{')) {
+                            jsonStr = codeBlock[1];
+                        }
+                    }
+                    
+                    // 3. 直接的JSON对象
+                    if (!jsonStr) {
+                        const jsonObject = content.match(/\{[\s\S]*\}/);
+                        if (jsonObject) {
+                            jsonStr = jsonObject[0];
+                        }
+                    }
+                    
+                    // 4. 如果都没找到，尝试整个内容
+                    if (!jsonStr) {
+                        jsonStr = content.trim();
+                    }
+                    
+                    // 解析JSON
+                    const parsed = JSON.parse(jsonStr);
+                    
+                    // 验证必需的字段
+                    if (!parsed.compressed_messages || !Array.isArray(parsed.compressed_messages)) {
+                        throw new Error('AI响应缺少compressed_messages字段或格式不正确');
+                    }
+                    
+                    if (parsed.compressed_messages.length === 0) {
+                        throw new Error('AI返回的压缩消息数组为空');
+                    }
+                    
+                    // 验证每个消息的格式
+                    for (let i = 0; i < parsed.compressed_messages.length; i++) {
+                        const msg = parsed.compressed_messages[i];
+                        if (!msg.speaker || !msg.content) {
+                            throw new Error(`第${i+1}条压缩消息缺少speaker或content字段`);
+                        }
+                    }
+                    
+                    return parsed;
+                    
+                } catch (error) {
+                    console.error('解析AI压缩结果失败:', error);
+                    console.error('原始内容:', content);
+                    
+                    if (error.message.includes('Unexpected token') || error.message.includes('JSON')) {
+                        throw new Error(`AI返回的JSON格式不正确: ${error.message}`);
+                    } else {
+                        throw new Error(`解析AI压缩结果失败: ${error.message}`);
+                    }
+                }
+            }
+
+            /**
+             * 显示压缩错误的详细信息
+             * @param {Error} error - 错误对象
+             * @param {number} messageCount - 消息数量
+             */
+            showCompressionError(error, messageCount) {
+                let errorType = '未知错误';
+                let suggestion = '';
+                
+                if (error.message.includes('HTTP 401') || error.message.includes('Unauthorized')) {
+                    errorType = 'API密钥错误';
+                    suggestion = '请检查系统AI的API密钥是否正确';
+                } else if (error.message.includes('HTTP 429') || error.message.includes('Rate limit')) {
+                    errorType = 'API调用频率限制';
+                    suggestion = '请稍后重试或检查API配额';
+                } else if (error.message.includes('HTTP 400') || error.message.includes('Bad Request')) {
+                    errorType = 'API请求格式错误';
+                    suggestion = '请检查系统AI模型名称是否正确';
+                } else if (error.message.includes('HTTP 404')) {
+                    errorType = 'API端点不存在';
+                    suggestion = '请检查系统AI的API地址是否正确';
+                } else if (error.message.includes('HTTP 500') || error.message.includes('Internal Server Error')) {
+                    errorType = 'API服务器内部错误';
+                    suggestion = '服务器暂时不可用，请稍后重试';
+                } else if (error.message.includes('网络错误') || error.message.includes('Failed to fetch')) {
+                    errorType = '网络连接错误';
+                    suggestion = '请检查网络连接或API地址';
+                } else if (error.message.includes('解析失败') || error.message.includes('JSON')) {
+                    errorType = 'AI响应解析失败';
+                    suggestion = '可能是模型返回格式不正确，建议调整提示词';
+                } else if (error.message.includes('响应为空')) {
+                    errorType = 'AI无响应';
+                    suggestion = '模型可能遇到问题，请检查配置或稍后重试';
+                }
+                
+                const errorMessage = `
+❌ AI压缩失败详情：
+• 错误类型: ${errorType}
+• 处理消息: ${messageCount}条
+• 建议操作: ${suggestion}
+• 技术详情: ${error.message}
+                `.trim();
+                
+                this.addSystemMessage(errorMessage, 'error');
+            }
+
+            /**
+             * 统一的AI调用方法（带重试机制）
+             * @param {string} aiType - AI类型
+             * @param {Object} config - AI配置
+             * @param {Array} messages - 消息数组
+             * @returns {Object} API响应
+             */
+            async callAIWithRetry(aiType, config, messages) {
+                let currentRetries = 0;
+                
+                while (currentRetries <= this.retryCount) {
+                    try {
+                        if (currentRetries > 0) {
+                            this.addSystemMessage(`🔄 ${aiType === 'System' ? '系统AI' : 'AI ' + aiType} 重试中 (${currentRetries}/${this.retryCount})...`, 'info');
+                            await this.sleep(this.retryDelay);
+                        }
+                        
+                        // 根据AI类型调用相应的API
+                        if (config.endpointType === 'openai') {
+                            if (aiType === 'System') {
+                                return await this.callOpenAIForCompression(config, messages);
+                            } else {
+                                // 对话AI使用流式调用（这里简化为非流式）
+                                return await this.callOpenAIForCompression(config, messages);
+                            }
+                        } else if (config.endpointType === 'gemini') {
+                            if (aiType === 'System') {
+                                return await this.callGeminiForCompression(config, messages);
+                            } else {
+                                // 对话AI使用流式调用（这里简化为非流式）
+                                return await this.callGeminiForCompression(config, messages);
+                            }
+                        } else {
+                            throw new Error(`不支持的AI类型: ${config.endpointType}`);
+                        }
+                        
+                    } catch (error) {
+                        console.warn(`AI ${aiType} 尝试 ${currentRetries + 1} 失败:`, error.message);
+                        currentRetries++;
+                        
+                        // 如果是配置错误，不需要重试
+                        if (error.message.includes('HTTP 401') || 
+                            error.message.includes('HTTP 404') || 
+                            error.message.includes('不支持的')) {
+                            break;
+                        }
+                        
+                        if (currentRetries <= this.retryCount) {
+                            this.addSystemMessage(`❌ AI ${aiType} 调用失败，${this.retryDelay/1000}秒后重试 (${currentRetries}/${this.retryCount})`, 'error');
+                        }
+                    }
+                }
+                
+                // 重试次数用完，暂停对话
+                this.addSystemMessage(`❌ AI ${aiType} 调用失败，已达重试上限，对话已暂停`, 'error');
+                this.isPaused = true;
+                this.updateUI();
+                
+                throw new Error(`AI ${aiType} 调用失败，已达重试上限`);
+            }
+
+            /**
+             * 调用OpenAI进行压缩（非流式）
+             */
+            async callOpenAIForCompression(config, messages) {
+                // 修复：如果URL以#结尾，强制使用输入地址；否则自动补全
+                let url;
+                if (config.apiUrl.endsWith('#')) {
+                    url = config.apiUrl.slice(0, -1); // 去掉末尾的#
+                } else if (config.apiUrl.endsWith('/v1/chat/completions')) {
+                    url = config.apiUrl;
+                } else {
+                    url = `${config.apiUrl}/v1/chat/completions`;
+                }
+
+                let response;
+                try {
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${config.apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: config.model,
+                            messages: messages,
+                            temperature: 0.7
+                        })
+                    });
+                } catch (error) {
+                    throw new Error(`网络错误: ${error.message}`);
+                }
+
+                if (!response.ok) {
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error && errorData.error.message) {
+                            errorMessage += ` - ${errorData.error.message}`;
+                        }
+                    } catch (e) {
+                        // 忽略JSON解析错误
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    throw new Error(`响应解析失败: ${error.message}`);
+                }
+
+                const content = data.choices?.[0]?.message?.content;
+                if (!content) {
+                    throw new Error('OpenAI API响应为空或格式不正确');
+                }
+
+                return { content };
+            }
+
+            /**
+             * 调用Gemini进行压缩（非流式）
+             */
+            async callGeminiForCompression(config, messages) {
+                const url = `${config.apiUrl}/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+
+                // 转换消息格式
+                const contents = messages.filter(m => m.role !== 'system').map(m => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }));
+
+                const systemInstruction = messages.find(m => m.role === 'system');
+                const requestBody = {
+                    contents: contents,
+                    generationConfig: {
+                        temperature: 0.7
+                    }
+                };
+
+                if (systemInstruction) {
+                    requestBody.systemInstruction = {
+                        parts: [{ text: systemInstruction.content }]
+                    };
+                }
+
+                let response;
+                try {
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+                } catch (error) {
+                    throw new Error(`网络错误: ${error.message}`);
+                }
+
+                if (!response.ok) {
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error && errorData.error.message) {
+                            errorMessage += ` - ${errorData.error.message}`;
+                        }
+                    } catch (e) {
+                        // 忽略JSON解析错误
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    throw new Error(`响应解析失败: ${error.message}`);
+                }
+
+                // 检查Gemini特有的错误格式
+                if (data.error) {
+                    throw new Error(`Gemini API错误: ${data.error.message || '未知错误'}`);
+                }
+
+                const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!content) {
+                    // 检查是否被安全过滤器阻止
+                    if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+                        throw new Error('内容被Gemini安全过滤器阻止，请调整提示词');
+                    }
+                    throw new Error('Gemini API响应为空或格式不正确');
+                }
+
+                return { content };
+            }
+
+            /**
+             * 获取压缩统计信息
+             */
+            getCompressionStats() {
+                const stats = this.compressionStats;
+                if (stats.compressionCount === 0) {
+                    return '暂无压缩统计';
+                }
+                
+                const totalSaved = stats.originalTokens - stats.compressedTokens;
+                const avgSavedPercentage = ((totalSaved / stats.originalTokens) * 100).toFixed(1);
+                
+                return `总计压缩 ${stats.compressionCount} 次，节省 ${totalSaved} tokens (${avgSavedPercentage}%)`;
+            }
+
+            /**
+             * 更新压缩统计UI显示
+             */
+            updateCompressionStatsUI() {
+                const statsSection = document.getElementById('compressionStatsSection');
+                const statsDiv = document.getElementById('compressionStats');
+                
+                if (this.enableCompression && this.compressionStats.compressionCount > 0) {
+                    const stats = this.compressionStats;
+                    const totalSaved = stats.originalTokens - stats.compressedTokens;
+                    const netSaved = totalSaved - (stats.aiCompressionTokens || 0);
+                    const avgSavedPercentage = ((totalSaved / stats.originalTokens) * 100).toFixed(1);
+                    
+                    let statsHtml = `
+                        📊 压缩次数: ${stats.compressionCount}<br>
+                        💾 节省Token: ${totalSaved} (${avgSavedPercentage}%)<br>
+                        📈 原始Token: ${stats.originalTokens}<br>
+                        📉 压缩后Token: ${stats.compressedTokens}<br>
+                        🤖 AI压缩成本: ${stats.aiCompressionTokens} tokens<br>
+                        💰 净节省: ${netSaved} tokens
+                    `;
+                    
+                    statsDiv.innerHTML = statsHtml;
+                    statsSection.style.display = 'block';
+                } else if (this.enableCompression) {
+                    statsDiv.innerHTML = `
+                        🤖 压缩模式: AI智能压缩<br>
+                        📏 压缩强度: ${(this.compressionRatio * 100).toFixed(0)}%<br>
+                        🔒 保护最近: ${this.keepRecentCount}条消息<br>
+                        📊 等待压缩数据...
+                    `;
+                    statsSection.style.display = 'block';
+                } else {
+                    statsSection.style.display = 'none';
+                }
             }
         }
 
