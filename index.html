@@ -150,6 +150,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            min-width: 0;
         }
 
         .chat-header {
@@ -189,7 +190,9 @@
             flex: 1;
             padding: 20px;
             overflow-y: auto;
+            overflow-x: hidden;
             background: #f8f9fa;
+            min-width: 0;
         }
 
         .message {
@@ -197,6 +200,9 @@
             padding: 12px 15px;
             border-radius: 8px;
             max-width: 80%;
+            overflow: hidden;
+            word-wrap: break-word;
+            min-width: 0;
         }
 
         .message-a {
@@ -226,6 +232,9 @@
         .message-content {
             line-height: 1.6;
             color: #333;
+            max-width: 100%;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
 
         .message-content h1, .message-content h2, .message-content h3 {
@@ -254,6 +263,7 @@
             padding: 2px 4px;
             border-radius: 3px;
             font-family: 'Courier New', monospace;
+            word-break: break-word;
         }
 
         .message-content pre {
@@ -261,7 +271,18 @@
             padding: 10px;
             border-radius: 5px;
             overflow-x: auto;
+            overflow-y: hidden;
             margin: 10px 0;
+            max-width: 100%;
+            white-space: pre;
+        }
+
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+            white-space: pre;
+            word-break: normal;
+            display: block;
         }
 
         .chat-input {
@@ -1158,6 +1179,15 @@
                     this.needsReset = false;
                 }
 
+                // 重新读取最新的配置
+                this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
+                this.contextLimit = parseInt(this.elements.contextLimit.value) || 0;
+                this.enableCompression = this.elements.enableCompression.checked;
+                this.compressionRatio = parseFloat(this.elements.compressionRatio.value) || 0.5;
+                this.keepRecentCount = parseInt(this.elements.keepRecentCount.value) || 5;
+                this.retryCount = parseInt(this.elements.retryCount.value) || 3;
+                this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
+
                 this.updateNextSpeaker();
                 this.updateUI();
                 this.runDialogue();
@@ -1818,13 +1848,6 @@
                 messageDiv.textContent = message;
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-                // 5秒后自动移除系统消息
-                setTimeout(() => {
-                    if (messageDiv.parentNode) {
-                        messageDiv.parentNode.removeChild(messageDiv);
-                    }
-                }, 5000);
             }
 
             sleep(ms) {
