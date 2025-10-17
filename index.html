@@ -600,9 +600,7 @@
                 <div class="config-section">
                     <div class="config-title">操作</div>
                     <button class="btn btn-success" id="startChat">开始对话</button>
-                    <button class="btn btn-warning" id="pauseChat">暂停</button>
-                    <button class="btn btn-success" id="resumeChat" style="display:none;">继续</button>
-                    <button class="btn btn-danger" id="stopChat">停止</button>
+                    <button class="btn btn-warning" id="pauseResumeChat">暂停</button>
                     <button class="btn btn-primary" id="exportChat">导出对话</button>
                     <button class="btn btn-danger" id="clearChat">清除对话</button>
                     <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
@@ -766,6 +764,7 @@
                 this.contextLimit = 0; // 新增：上下文限制
                 this.isRunning = false;
                 this.isPaused = false;
+                this.isPausedManually = false; // 新增：标记是否手动暂停
                 this.retryCount = 3;
                 this.retryDelay = 2000;
                 this.currentRetries = 0;
@@ -842,9 +841,7 @@
 
                     saveConfig: document.getElementById('saveConfig'),
                     startChat: document.getElementById('startChat'),
-                    pauseChat: document.getElementById('pauseChat'),
-                    resumeChat: document.getElementById('resumeChat'),
-                    stopChat: document.getElementById('stopChat'),
+                    pauseResumeChat: document.getElementById('pauseResumeChat'),
                     exportChat: document.getElementById('exportChat'),
                     clearChat: document.getElementById('clearChat'),
                     retryChat: document.getElementById('retryChat'),
@@ -874,9 +871,7 @@
                 // 按钮事件
                 this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
                 this.elements.startChat.addEventListener('click', () => this.startDialogue());
-                this.elements.pauseChat.addEventListener('click', () => this.pauseDialogue());
-                this.elements.resumeChat.addEventListener('click', () => this.resumeDialogue());
-                this.elements.stopChat.addEventListener('click', () => this.stopDialogue());
+                this.elements.pauseResumeChat.addEventListener('click', () => this.togglePauseResume());
                 this.elements.exportChat.addEventListener('click', () => this.exportDialogue());
                 this.elements.clearChat.addEventListener('click', () => this.clearDialogue());
                 this.elements.retryChat.addEventListener('click', () => this.retryLastRequest());
@@ -1133,22 +1128,41 @@
 
                 this.isRunning = true;
                 this.isPaused = false;
+                this.isPausedManually = false;
                 this.needsReset = false;
                 this.updateUI();
 
                 await this.runDialogue();
             }
 
+            togglePauseResume() {
+                if (this.isPaused) {
+                    // 当前是暂停状态，点击继续
+                    this.resumeDialogue();
+                } else if (this.isRunning) {
+                    // 当前是运行状态，点击暂停
+                    this.pauseDialogue();
+                }
+            }
+
             pauseDialogue() {
                 this.isPaused = true;
+                this.isPausedManually = true; // 标记为手动暂停
                 this.updateUI();
+                this.addSystemMessage('⏸️ 对话已手动暂停', 'info');
             }
 
             resumeDialogue() {
                 this.isPaused = false;
+                this.isPausedManually = false; // 清除手动暂停标记
+                
+                // 如果达到最大会话数，开启新一轮
                 if (this.needsReset) {
                     this.currentRound = 0;
                     this.needsReset = false;
+                    this.addSystemMessage('🔄 开启新一轮对话', 'success');
+                } else {
+                    this.addSystemMessage('▶️ 继续对话', 'success');
                 }
 
                 // 重新读取最新的配置
@@ -1178,14 +1192,6 @@
                 } else {
                     this.nextSpeaker = 'A';
                 }
-            }
-
-            stopDialogue() {
-                this.isRunning = false;
-                this.isPaused = false;
-                // 清除当前流式消息ID
-                this.currentStreamingMessageId = null;
-                this.updateUI();
             }
 
             async sendOpeningMessage() {
@@ -1227,6 +1233,7 @@
                 // 直接开始对话，AI B 响应
                 this.isRunning = true;
                 this.isPaused = false;
+                this.isPausedManually = false;
                 this.needsReset = false;
                 this.updateUI();
 
@@ -1333,11 +1340,17 @@
                             this.showMessage(`AI ${aiType} 调用失败，${this.retryDelay/1000}秒后重试 (${this.currentRetries}/${this.retryCount})`, 'error');
                             await this.sleep(this.retryDelay);
                         } else {
-                            // 重试次数用完，显示错误消息
+                            // 重试次数用完，显示错误消息，并自动进入暂停状态
                             this.addMessageToUI(`AI ${aiType}`, `❌ 调用失败，已达重试上限: ${error.message}`, false, loadingMessageId);
-                            this.showMessage(`AI ${aiType} 调用失败，已达重试上限`, 'error');
-                            this.setStatus('错误', 'stopped');
+                            this.showMessage(`AI ${aiType} 调用失败，已达重试上限，系统已自动暂停`, 'error');
+                            this.setStatus('暂停', 'stopped');
                             this.currentStreamingMessageId = null;
+                            
+                            // 自动进入暂停状态（非手动暂停）
+                            this.isPaused = true;
+                            this.isPausedManually = false;
+                            this.updateUI();
+                            
                             return false;
                         }
                     }
@@ -1740,10 +1753,19 @@
                 const isStopped = !this.isRunning;
                 const isPaused = this.isPaused;
 
+                // 显示/隐藏按钮
                 this.elements.startChat.style.display = isStopped ? 'inline-block' : 'none';
-                this.elements.pauseChat.style.display = isRunning ? 'inline-block' : 'none';
-                this.elements.resumeChat.style.display = isPaused ? 'inline-block' : 'none';
+                this.elements.pauseResumeChat.style.display = (isRunning || isPaused) ? 'inline-block' : 'none';
                 this.elements.retryChat.style.display = isPaused ? 'inline-block' : 'none';
+
+                // 更新暂停/继续按钮的文字和样式
+                if (isPaused) {
+                    this.elements.pauseResumeChat.textContent = '继续';
+                    this.elements.pauseResumeChat.className = 'btn btn-success';
+                } else if (isRunning) {
+                    this.elements.pauseResumeChat.textContent = '暂停';
+                    this.elements.pauseResumeChat.className = 'btn btn-warning';
+                }
 
                 // 更新状态指示器
                 if (isRunning) {
@@ -1756,10 +1778,92 @@
             }
 
             async retryLastRequest() {
-                if (this.isPaused) {
-                    // 重试时也需要更新下一个发言者
-                    this.updateNextSpeaker();
-                    this.resumeDialogue();
+                if (!this.isPaused) {
+                    this.showMessage('只有在暂停状态才能重试', 'error');
+                    return;
+                }
+
+                const wasManuallyPaused = this.isPausedManually;
+                
+                // 检查是否有上一条消息
+                if (this.conversations.length === 0) {
+                    this.showMessage('没有可重试的消息', 'error');
+                    return;
+                }
+
+                // 移除最后一条失败的消息（如果有）
+                const lastConv = this.conversations[this.conversations.length - 1];
+                const lastMessageSpeaker = lastConv.speaker;
+                
+                // 如果最后一条消息是错误消息，删除它
+                if (lastConv.content.includes('❌')) {
+                    this.conversations.pop();
+                    // 同时从UI中删除这条消息
+                    const messagesContainer = this.elements.chatMessages;
+                    const lastMessageElement = messagesContainer.lastElementChild;
+                    if (lastMessageElement && lastMessageElement.classList.contains('message')) {
+                        lastMessageElement.remove();
+                    }
+                }
+
+                this.addSystemMessage('🔄 重试上一条消息...', 'info');
+
+                // 确定要重试的AI
+                this.updateNextSpeaker();
+                const aiToRetry = this.nextSpeaker;
+
+                // 执行重试（仅一次，不使用自动重试机制）
+                const loadingMessageId = this.addLoadingMessage(`AI ${aiToRetry}`);
+                this.currentStreamingMessageId = loadingMessageId;
+
+                try {
+                    const config = this.getAIConfig(aiToRetry);
+                    const messages = await this.buildMessages(aiToRetry);
+
+                    this.setStatus('重试中', 'running');
+                    const response = await this.makeAPIRequest(config, messages, `AI ${aiToRetry}`, loadingMessageId);
+
+                    if (response && response.content) {
+                        // 重试成功
+                        this.conversations.push({
+                            role: 'assistant',
+                            content: response.content,
+                            speaker: `AI ${aiToRetry}`
+                        });
+
+                        this.currentStreamingMessageId = null;
+                        this.addSystemMessage('✅ 重试成功', 'success');
+
+                        // 根据暂停类型决定后续操作
+                        if (wasManuallyPaused) {
+                            // 手动暂停：保持暂停状态
+                            this.setStatus('暂停', 'stopped');
+                            this.addSystemMessage('⏸️ 保持暂停状态，请手动点击继续按钮', 'info');
+                        } else {
+                            // 自动暂停：自动继续对话
+                            this.addSystemMessage('▶️ 自动继续对话', 'success');
+                            this.isPaused = false;
+                            this.isPausedManually = false;
+                            this.updateUI();
+                            
+                            // 切换到下一个发言者并继续对话
+                            this.nextSpeaker = this.nextSpeaker === 'A' ? 'B' : 'A';
+                            this.currentRound++;
+                            this.updateRoundCounter();
+                            await this.sleep(1000);
+                            this.runDialogue();
+                        }
+                    } else {
+                        throw new Error('响应内容为空');
+                    }
+                } catch (error) {
+                    // 重试失败
+                    console.error(`重试失败:`, error);
+                    this.addMessageToUI(`AI ${aiToRetry}`, `❌ 重试失败: ${error.message}`, false, loadingMessageId);
+                    this.showMessage(`重试失败: ${error.message}`, 'error');
+                    this.setStatus('暂停', 'stopped');
+                    this.currentStreamingMessageId = null;
+                    // 保持暂停状态
                 }
             }
 
@@ -1802,6 +1906,8 @@
                     this.currentRound = 0;
                     this.isRunning = false;
                     this.isPaused = false;
+                    this.isPausedManually = false;
+                    this.needsReset = false;
                     this.openingMessage = '';
                     this.nextSpeaker = 'B';
                     this.currentStreamingMessageId = null;
