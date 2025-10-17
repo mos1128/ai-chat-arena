@@ -599,7 +599,6 @@
                 <!-- 操作按钮 -->
                 <div class="config-section">
                     <div class="config-title">操作</div>
-                    <button class="btn btn-success" id="startChat">开始对话</button>
                     <button class="btn btn-warning" id="pauseResumeChat">暂停</button>
                     <button class="btn btn-primary" id="exportChat">导出对话</button>
                     <button class="btn btn-danger" id="clearChat">清除对话</button>
@@ -773,6 +772,8 @@
                 this.nextSpeaker = 'B';
                 // 新增：用于跟踪当前正在流式显示的消息
                 this.currentStreamingMessageId = null;
+                // 新增：用于跟踪当前是否有AI正在工作（防止并发）
+                this.isAIWorking = false;
 
                 // 代理配置相关
                 this.proxies = new Map(); // 存储所有代理配置
@@ -840,7 +841,6 @@
                     roundCounter: document.getElementById('roundCounter'),
 
                     saveConfig: document.getElementById('saveConfig'),
-                    startChat: document.getElementById('startChat'),
                     pauseResumeChat: document.getElementById('pauseResumeChat'),
                     exportChat: document.getElementById('exportChat'),
                     clearChat: document.getElementById('clearChat'),
@@ -870,7 +870,6 @@
 
                 // 按钮事件
                 this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
-                this.elements.startChat.addEventListener('click', () => this.startDialogue());
                 this.elements.pauseResumeChat.addEventListener('click', () => this.togglePauseResume());
                 this.elements.exportChat.addEventListener('click', () => this.exportDialogue());
                 this.elements.clearChat.addEventListener('click', () => this.clearDialogue());
@@ -1115,26 +1114,6 @@
                 return messageId;
             }
 
-            async startDialogue() {
-                if (!this.validateConfiguration()) return;
-
-                this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
-                this.contextLimit = parseInt(this.elements.contextLimit.value) || 0; // 新增
-                this.enableCompression = this.elements.enableCompression.checked;
-                this.compressionRatio = parseFloat(this.elements.compressionRatio.value) || 0.5;
-                this.keepRecentCount = parseInt(this.elements.keepRecentCount.value) || 5;
-                this.retryCount = parseInt(this.elements.retryCount.value) || 3;
-                this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
-
-                this.isRunning = true;
-                this.isPaused = false;
-                this.isPausedManually = false;
-                this.needsReset = false;
-                this.updateUI();
-
-                await this.runDialogue();
-            }
-
             togglePauseResume() {
                 if (this.isPaused) {
                     // 当前是暂停状态，点击继续
@@ -1153,6 +1132,14 @@
             }
 
             resumeDialogue() {
+                // 检查是否有AI正在工作
+                if (this.isAIWorking) {
+                    this.showMessage('请等待当前AI完成工作后再继续', 'error');
+                    return;
+                }
+                
+                const wasManuallyPaused = this.isPausedManually;
+                
                 this.isPaused = false;
                 this.isPausedManually = false; // 清除手动暂停标记
                 
@@ -1174,7 +1161,15 @@
                 this.retryCount = parseInt(this.elements.retryCount.value) || 3;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
-                this.updateNextSpeaker();
+                // 如果是自动暂停（失败导致），需要切换到下一个AI
+                // 如果是手动暂停，保持当前nextSpeaker不变
+                if (!wasManuallyPaused) {
+                    // 自动暂停：切换到下一个AI
+                    this.updateNextSpeaker();
+                    this.addSystemMessage('⚠️ 上次失败，切换到下一个AI继续对话', 'info');
+                }
+                // 手动暂停：不调用updateNextSpeaker，保持当前的nextSpeaker
+                
                 this.updateUI();
                 this.runDialogue();
             }
@@ -1294,6 +1289,10 @@
             // ====== 修复后的API调用方法 ======
 
             async callAI(aiType) {
+                // 设置AI工作标志
+                this.isAIWorking = true;
+                this.updateUI();
+                
                 const config = this.getAIConfig(aiType);
                 const messages = await this.buildMessages(aiType);
 
@@ -1325,6 +1324,9 @@
 
                             this.setStatus('就绪', 'ready');
                             this.currentStreamingMessageId = null;
+                            // 清除AI工作标志
+                            this.isAIWorking = false;
+                            this.updateUI();
                             return true;
                         }
 
@@ -1349,6 +1351,8 @@
                             // 自动进入暂停状态（非手动暂停）
                             this.isPaused = true;
                             this.isPausedManually = false;
+                            // 清除AI工作标志
+                            this.isAIWorking = false;
                             this.updateUI();
                             
                             return false;
@@ -1356,6 +1360,9 @@
                     }
                 }
 
+                // 清除AI工作标志
+                this.isAIWorking = false;
+                this.updateUI();
                 return false;
             }
 
@@ -1621,9 +1628,10 @@
             /**
              * 构建API请求的消息数组，支持上下文限制
              * @param {string} aiType - AI类型 ('A' 或 'B')
+             * @param {boolean} skipCompression - 是否跳过压缩（重试时使用）
              * @returns {Array} 消息数组
              */
-            async buildMessages(aiType) {
+            async buildMessages(aiType, skipCompression = false) {
                 const config = this.getAIConfig(aiType);
                 const messages = [];
 
@@ -1638,8 +1646,8 @@
                 // 获取需要发送的对话历史
                 let conversationsToSend = this.conversations;
 
-                // 首先应用智能压缩（如果启用）
-                if (this.enableCompression && conversationsToSend.length > this.keepRecentCount) {
+                // 首先应用智能压缩（如果启用且未跳过）
+                if (!skipCompression && this.enableCompression && conversationsToSend.length > this.keepRecentCount) {
                     conversationsToSend = await this.compressConversations([...conversationsToSend]);
                 }
 
@@ -1674,6 +1682,7 @@
                     发送对话条数: conversationsToSend.length,
                     上下文限制: this.contextLimit || '无限制',
                     AI智能压缩: this.enableCompression ? '已启用' : '未启用',
+                    跳过压缩: skipCompression ? '是' : '否',
                     保护最近消息: this.keepRecentCount,
                     压缩统计: this.compressionStats
                 });
@@ -1754,7 +1763,6 @@
                 const isPaused = this.isPaused;
 
                 // 显示/隐藏按钮
-                this.elements.startChat.style.display = isStopped ? 'inline-block' : 'none';
                 this.elements.pauseResumeChat.style.display = (isRunning || isPaused) ? 'inline-block' : 'none';
                 this.elements.retryChat.style.display = isPaused ? 'inline-block' : 'none';
 
@@ -1762,9 +1770,17 @@
                 if (isPaused) {
                     this.elements.pauseResumeChat.textContent = '继续';
                     this.elements.pauseResumeChat.className = 'btn btn-success';
+                    // 如果AI正在工作，禁用继续按钮
+                    this.elements.pauseResumeChat.disabled = this.isAIWorking;
                 } else if (isRunning) {
                     this.elements.pauseResumeChat.textContent = '暂停';
                     this.elements.pauseResumeChat.className = 'btn btn-warning';
+                    this.elements.pauseResumeChat.disabled = false;
+                }
+                
+                // 如果AI正在工作，禁用重试按钮
+                if (isPaused) {
+                    this.elements.retryChat.disabled = this.isAIWorking;
                 }
 
                 // 更新状态指示器
@@ -1782,6 +1798,12 @@
                     this.showMessage('只有在暂停状态才能重试', 'error');
                     return;
                 }
+                
+                // 检查是否有AI正在工作
+                if (this.isAIWorking) {
+                    this.showMessage('请等待当前AI完成工作后再重试', 'error');
+                    return;
+                }
 
                 const wasManuallyPaused = this.isPausedManually;
                 
@@ -1791,9 +1813,12 @@
                     return;
                 }
 
+                // 确定要重试的AI - 应该是nextSpeaker，而不是切换后的
+                // nextSpeaker已经指向应该发言的AI
+                const aiToRetry = this.nextSpeaker;
+                
                 // 移除最后一条失败的消息（如果有）
                 const lastConv = this.conversations[this.conversations.length - 1];
-                const lastMessageSpeaker = lastConv.speaker;
                 
                 // 如果最后一条消息是错误消息，删除它
                 if (lastConv.content.includes('❌')) {
@@ -1806,19 +1831,18 @@
                     }
                 }
 
-                this.addSystemMessage('🔄 重试上一条消息...', 'info');
-
-                // 确定要重试的AI
-                this.updateNextSpeaker();
-                const aiToRetry = this.nextSpeaker;
+                this.addSystemMessage(`🔄 重试AI ${aiToRetry}的消息...`, 'info');
 
                 // 执行重试（仅一次，不使用自动重试机制）
                 const loadingMessageId = this.addLoadingMessage(`AI ${aiToRetry}`);
                 this.currentStreamingMessageId = loadingMessageId;
+                this.isAIWorking = true;
+                this.updateUI();
 
                 try {
                     const config = this.getAIConfig(aiToRetry);
-                    const messages = await this.buildMessages(aiToRetry);
+                    // 重试时跳过压缩，因为第一次调用已经触发过压缩了
+                    const messages = await this.buildMessages(aiToRetry, true);
 
                     this.setStatus('重试中', 'running');
                     const response = await this.makeAPIRequest(config, messages, `AI ${aiToRetry}`, loadingMessageId);
@@ -1832,12 +1856,14 @@
                         });
 
                         this.currentStreamingMessageId = null;
+                        this.isAIWorking = false;
                         this.addSystemMessage('✅ 重试成功', 'success');
 
                         // 根据暂停类型决定后续操作
                         if (wasManuallyPaused) {
                             // 手动暂停：保持暂停状态
                             this.setStatus('暂停', 'stopped');
+                            this.updateUI();
                             this.addSystemMessage('⏸️ 保持暂停状态，请手动点击继续按钮', 'info');
                         } else {
                             // 自动暂停：自动继续对话
@@ -1863,6 +1889,8 @@
                     this.showMessage(`重试失败: ${error.message}`, 'error');
                     this.setStatus('暂停', 'stopped');
                     this.currentStreamingMessageId = null;
+                    this.isAIWorking = false;
+                    this.updateUI();
                     // 保持暂停状态
                 }
             }
@@ -1911,6 +1939,7 @@
                     this.openingMessage = '';
                     this.nextSpeaker = 'B';
                     this.currentStreamingMessageId = null;
+                    this.isAIWorking = false;
                     
                     // 重置压缩统计和缓存
                     this.compressedMessages = [];
