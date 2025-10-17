@@ -507,8 +507,6 @@
                 <button class="btn btn-primary" id="saveConfig">保存配置</button>
                 <button class="btn btn-success" id="startChat">开始对话</button>
                 <button class="btn btn-warning" id="pauseChat">暂停</button>
-                <button class="btn btn-success" id="resumeChat" style="display:none;">继续</button>
-                <button class="btn btn-danger" id="stopChat">停止</button>
                 <button class="btn btn-primary" id="exportChat">导出对话</button>
                 <button class="btn btn-danger" id="clearChat">清除对话</button>
                 <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
@@ -692,6 +690,8 @@
                 this.needsReset = false;
                 this.openingMessage = '';
                 this.nextSpeaker = 'B';
+                this.pausedByError = false; // 新增：标记是否由错误导致的暂停
+                this.lastMessageFailed = false; // 新增：标记最后一条消息是否失败
                 // 新增：用于跟踪当前正在流式显示的消息
                 this.currentStreamingMessageId = null;
                 
@@ -762,8 +762,6 @@
                     saveConfig: document.getElementById('saveConfig'),
                     startChat: document.getElementById('startChat'),
                     pauseChat: document.getElementById('pauseChat'),
-                    resumeChat: document.getElementById('resumeChat'),
-                    stopChat: document.getElementById('stopChat'),
                     exportChat: document.getElementById('exportChat'),
                     clearChat: document.getElementById('clearChat'),
                     retryChat: document.getElementById('retryChat'),
@@ -783,9 +781,7 @@
                 // 按钮事件
                 this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
                 this.elements.startChat.addEventListener('click', () => this.startDialogue());
-                this.elements.pauseChat.addEventListener('click', () => this.pauseDialogue());
-                this.elements.resumeChat.addEventListener('click', () => this.resumeDialogue());
-                this.elements.stopChat.addEventListener('click', () => this.stopDialogue());
+                this.elements.pauseChat.addEventListener('click', () => this.togglePauseResume());
                 this.elements.exportChat.addEventListener('click', () => this.exportDialogue());
                 this.elements.clearChat.addEventListener('click', () => this.clearDialogue());
                 this.elements.retryChat.addEventListener('click', () => this.retryLastRequest());
@@ -1162,18 +1158,30 @@
                 this.isRunning = true;
                 this.isPaused = false;
                 this.needsReset = false;
+                this.pausedByError = false;
+                this.lastMessageFailed = false;
                 this.updateUI();
 
                 await this.runDialogue();
             }
 
+            togglePauseResume() {
+                if (this.isPaused) {
+                    this.resumeDialogue();
+                } else {
+                    this.pauseDialogue();
+                }
+            }
+
             pauseDialogue() {
                 this.isPaused = true;
+                this.pausedByError = false;
                 this.updateUI();
             }
 
             resumeDialogue() {
                 this.isPaused = false;
+                this.pausedByError = false;
                 if (this.needsReset) {
                     this.currentRound = 0;
                     this.needsReset = false;
@@ -1206,14 +1214,6 @@
                 } else {
                     this.nextSpeaker = 'A';
                 }
-            }
-
-            stopDialogue() {
-                this.isRunning = false;
-                this.isPaused = false;
-                // 清除当前流式消息ID
-                this.currentStreamingMessageId = null;
-                this.updateUI();
             }
 
             async sendOpeningMessage() {
@@ -1256,6 +1256,8 @@
                 this.isRunning = true;
                 this.isPaused = false;
                 this.needsReset = false;
+                this.pausedByError = false;
+                this.lastMessageFailed = false;
                 this.updateUI();
 
                 await this.runDialogue();
@@ -1266,6 +1268,7 @@
                     if (this.maxRounds > 0 && this.currentRound >= this.maxRounds) {
                         this.isPaused = true;
                         this.needsReset = true;
+                        this.pausedByError = false;
                         this.updateUI();
                         break;
                     }
@@ -1275,10 +1278,13 @@
 
                     if (!success) {
                         this.isPaused = true;
+                        this.pausedByError = true;
+                        this.lastMessageFailed = true;
                         this.updateUI();
                         break;
                     }
 
+                    this.lastMessageFailed = false;
                     this.currentRound++;
                     this.updateRoundCounter();
 
@@ -1363,6 +1369,14 @@
                         } else {
                             // 重试次数用完，显示错误消息
                             this.addMessageToUI(`AI ${aiType}`, `❌ 调用失败，已达重试上限: ${error.message}`, false, loadingMessageId);
+                            
+                            // 将失败消息添加到会话历史，方便后续删除
+                            this.conversations.push({
+                                role: 'assistant',
+                                content: `❌ 调用失败，已达重试上限: ${error.message}`,
+                                speaker: `AI ${aiType}`
+                            });
+                            
                             this.showMessage(`AI ${aiType} 调用失败，已达重试上限`, 'error');
                             this.setStatus('错误', 'stopped');
                             this.currentStreamingMessageId = null;
@@ -1722,8 +1736,18 @@
                 const isPaused = this.isPaused;
 
                 this.elements.startChat.style.display = isStopped ? 'inline-block' : 'none';
-                this.elements.pauseChat.style.display = isRunning ? 'inline-block' : 'none';
-                this.elements.resumeChat.style.display = isPaused ? 'inline-block' : 'none';
+                
+                // 暂停/继续按钮切换
+                if (isPaused) {
+                    this.elements.pauseChat.textContent = '继续';
+                    this.elements.pauseChat.className = 'btn btn-success';
+                } else if (isRunning) {
+                    this.elements.pauseChat.textContent = '暂停';
+                    this.elements.pauseChat.className = 'btn btn-warning';
+                }
+                this.elements.pauseChat.style.display = (isRunning || isPaused) ? 'inline-block' : 'none';
+                
+                // 重试按钮只在暂停时显示
                 this.elements.retryChat.style.display = isPaused ? 'inline-block' : 'none';
 
                 // 更新状态指示器
@@ -1737,10 +1761,95 @@
             }
 
             async retryLastRequest() {
-                if (this.isPaused) {
-                    // 重试时也需要更新下一个发言者
-                    this.updateNextSpeaker();
-                    this.resumeDialogue();
+                if (!this.isPaused) {
+                    this.showMessage('只能在暂停状态下重试', 'error');
+                    return;
+                }
+
+                if (this.conversations.length === 0) {
+                    this.showMessage('没有消息可以重试', 'error');
+                    return;
+                }
+
+                // 找到最后一条AI消息并确定是哪个AI
+                let lastAIMessage = null;
+                let lastAISpeaker = null;
+                
+                for (let i = this.conversations.length - 1; i >= 0; i--) {
+                    const conv = this.conversations[i];
+                    if (conv.speaker === 'AI A' || conv.speaker === 'AI B') {
+                        lastAIMessage = conv;
+                        lastAISpeaker = conv.speaker === 'AI A' ? 'A' : 'B';
+                        break;
+                    }
+                }
+
+                if (!lastAIMessage) {
+                    this.showMessage('没有找到可重试的AI消息', 'error');
+                    return;
+                }
+
+                // 删除最后一条AI消息及其之后的所有消息
+                const indexToRemove = this.conversations.indexOf(lastAIMessage);
+                this.conversations.splice(indexToRemove, this.conversations.length - indexToRemove);
+
+                // 从UI中删除对应的消息
+                const messagesContainer = this.elements.chatMessages;
+                const allMessages = Array.from(messagesContainer.children);
+                
+                // 计算要删除的UI消息数量（倒序查找第一个AI消息）
+                let foundAIMessage = false;
+                const messagesToRemove = [];
+                
+                for (let i = allMessages.length - 1; i >= 0; i--) {
+                    const child = allMessages[i];
+                    messagesToRemove.push(child);
+                    
+                    if (child.classList && (child.classList.contains('message-a') || child.classList.contains('message-b'))) {
+                        foundAIMessage = true;
+                        break;
+                    }
+                }
+                
+                messagesToRemove.forEach(msg => msg.remove());
+
+                // 重置重试计数器
+                this.currentRetries = 0;
+                
+                this.addSystemMessage(`🔄 重试 AI ${lastAISpeaker} 的请求...`, 'info');
+
+                // 执行单次重试（重试刚才删除的AI）
+                const success = await this.callAI(lastAISpeaker);
+
+                if (success) {
+                    // 重试成功
+                    this.lastMessageFailed = false;
+                    
+                    if (this.pausedByError) {
+                        // 如果是由错误导致的暂停，重试成功后自动继续
+                        this.addSystemMessage('✅ 重试成功，自动继续对话...', 'success');
+                        this.pausedByError = false;
+                        
+                        // 更新轮次和发言者（切换到下一个AI）
+                        this.currentRound++;
+                        this.updateRoundCounter();
+                        this.nextSpeaker = lastAISpeaker === 'A' ? 'B' : 'A';
+                        
+                        // 继续对话
+                        this.isPaused = false;
+                        this.updateUI();
+                        await this.sleep(1000);
+                        await this.runDialogue();
+                    } else {
+                        // 如果是手动暂停，重试成功后保持暂停状态
+                        this.addSystemMessage('✅ 重试成功，保持暂停状态', 'success');
+                        this.updateUI();
+                    }
+                } else {
+                    // 重试失败
+                    this.lastMessageFailed = true;
+                    this.addSystemMessage('❌ 重试失败，保持暂停状态', 'error');
+                    this.updateUI();
                 }
             }
 
@@ -1786,6 +1895,8 @@
                     this.openingMessage = '';
                     this.nextSpeaker = 'B';
                     this.currentStreamingMessageId = null;
+                    this.pausedByError = false;
+                    this.lastMessageFailed = false;
                     
                     // 重置压缩统计和缓存
                     this.compressedMessages = [];
