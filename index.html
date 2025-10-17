@@ -495,109 +495,175 @@
             color: #1976d2;
         }
 
+        /* Tab导航样式 */
+        .config-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-button:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .tab-button.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        /* Tab内容容器 */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 代理配置项样式 */
+        .proxy-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .proxy-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .proxy-item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .proxy-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+
+        .proxy-form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .proxy-form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
 
     </style>
 </head>
 <body>    <div class="container">
         <!-- 左侧配置栏 -->
         <div class="config-panel">
-            <!-- 操作按钮 -->
-            <div class="config-section">
-                <div class="config-title">操作</div>
-                <button class="btn btn-primary" id="saveConfig">保存配置</button>
-                <button class="btn btn-success" id="startChat">开始对话</button>
-                <button class="btn btn-warning" id="pauseChat">暂停</button>
-                <button class="btn btn-primary" id="exportChat">导出对话</button>
-                <button class="btn btn-danger" id="clearChat">清除对话</button>
-                <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
+            <!-- Tab切换导航 -->
+            <div class="config-tabs">
+                <button class="tab-button active" data-tab="ai-config">AI配置</button>
+                <button class="tab-button" data-tab="proxy-config">代理配置</button>
             </div>
 
-            <!-- AI A 配置 -->
-            <div class="config-section">
-                <div class="config-title">AI A 配置</div>
-                <div class="form-group">
-                    <label class="form-label">端点类型</label>
-                    <select class="form-select" id="endpointTypeA">
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Gemini</option>
-                    </select>
+            <!-- Tab内容容器 -->
+            <div class="tab-content" id="ai-config" style="display: block;">
+                <!-- 操作按钮 -->
+                <div class="config-section">
+                    <div class="config-title">操作</div>
+                    <button class="btn btn-success" id="startChat">开始对话</button>
+                    <button class="btn btn-warning" id="pauseChat">暂停</button>
+                    <button class="btn btn-success" id="resumeChat" style="display:none;">继续</button>
+                    <button class="btn btn-danger" id="stopChat">停止</button>
+                    <button class="btn btn-primary" id="exportChat">导出对话</button>
+                    <button class="btn btn-danger" id="clearChat">清除对话</button>
+                    <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">API地址</label>
-                    <input type="text" class="form-input" id="apiUrlA" placeholder="API地址">
-                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">API密钥</label>
-                    <input type="text" class="form-input" id="apiKeyA" placeholder="API密钥">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">模型名称</label>
-                    <input type="text" class="form-input" id="modelA" placeholder="模型名称">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">提示词</label>
-                    <textarea class="form-textarea" id="promptA" placeholder="AI A的系统提示词"></textarea>
-                </div>
-            </div>
 
-            <!-- AI B 配置 -->
-            <div class="config-section">
-                <div class="config-title">AI B 配置</div>
-                <div class="form-group">
-                    <label class="form-label">端点类型</label>
-                    <select class="form-select" id="endpointTypeB">
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Gemini</option>
-                    </select>
+                <!-- 配置管理 -->
+                <div class="config-section">
+                    <div class="config-title">配置管理</div>
+                    <button class="btn btn-primary" id="saveConfig">保存配置</button>
+                    <button class="btn btn-primary" id="exportConfig">导出</button>
+                    <button class="btn btn-success" id="importConfig">导入</button>
+                    <input type="file" id="importConfigFile" accept=".json" style="display: none;">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">API地址</label>
-                    <input type="text" class="form-input" id="apiUrlB" placeholder="API地址">
-                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">API密钥</label>
-                    <input type="text" class="form-input" id="apiKeyB" placeholder="API密钥">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">模型名称</label>
-                    <input type="text" class="form-input" id="modelB" placeholder="模型名称">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">提示词</label>
-                    <textarea class="form-textarea" id="promptB" placeholder="AI B的系统提示词"></textarea>
-                </div>
-            </div>
 
-            <!-- 系统AI配置 -->
-            <div class="config-section">
-                <div class="config-title">系统AI配置 (用于压缩等功能)</div>
-                <div class="form-group">
-                    <label class="form-label">端点类型</label>
-                    <select class="form-select" id="endpointTypeSystem">
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Gemini</option>
-                    </select>
+                <!-- AI A 配置 -->
+                <div class="config-section">
+                    <div class="config-title">AI A 配置</div>
+                    <div class="form-group">
+                        <label class="form-label">选择代理</label>
+                        <select class="form-select" id="proxySelectA">
+                            <option value="">请选择代理配置</option>
+                        </select>
+                        <div class="api-hint">从代理配置页面中选择一个已配置的代理</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">提示词</label>
+                        <textarea class="form-textarea" id="promptA" placeholder="AI A的系统提示词"></textarea>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">API地址</label>
-                    <input type="text" class="form-input" id="apiUrlSystem" placeholder="API地址">
-                    <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
+
+                <!-- AI B 配置 -->
+                <div class="config-section">
+                    <div class="config-title">AI B 配置</div>
+                    <div class="form-group">
+                        <label class="form-label">选择代理</label>
+                        <select class="form-select" id="proxySelectB">
+                            <option value="">请选择代理配置</option>
+                        </select>
+                        <div class="api-hint">从代理配置页面中选择一个已配置的代理</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">提示词</label>
+                        <textarea class="form-textarea" id="promptB" placeholder="AI B的系统提示词"></textarea>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">API密钥</label>
-                    <input type="text" class="form-input" id="apiKeySystem" placeholder="API密钥">
+
+                <!-- 系统AI配置 -->
+                <div class="config-section">
+                    <div class="config-title">系统AI配置 (用于压缩等功能)</div>
+                    <div class="form-group">
+                        <label class="form-label">选择代理</label>
+                        <select class="form-select" id="proxySelectSystem">
+                            <option value="">请选择代理配置</option>
+                        </select>
+                        <div class="api-hint">从代理配置页面中选择一个已配置的代理</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">提示词</label>
+                        <textarea class="form-textarea" id="promptSystem" placeholder="系统AI的压缩提示词"></textarea>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">模型名称</label>
-                    <input type="text" class="form-input" id="modelSystem" placeholder="模型名称">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">提示词</label>
-                    <textarea class="form-textarea" id="promptSystem" placeholder="系统AI的压缩提示词"></textarea>
-                </div>
-            </div>
 
             <!-- 对话控制 -->
             <div class="config-section">
@@ -641,11 +707,27 @@
                 </div>
             </div>
 
-            <!-- 压缩统计 -->
-            <div class="config-section" id="compressionStatsSection" style="display:none;">
-                <div class="config-title">压缩统计</div>
-                <div id="compressionStats" style="font-size: 12px; color: #666; line-height: 1.5;">
-                    暂无压缩数据
+                <!-- 压缩统计 -->
+                <div class="config-section" id="compressionStatsSection" style="display:none;">
+                    <div class="config-title">压缩统计</div>
+                    <div id="compressionStats" style="font-size: 12px; color: #666; line-height: 1.5;">
+                        暂无压缩数据
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代理配置Tab内容 -->
+            <div class="tab-content" id="proxy-config" style="display: none;">
+                <!-- 代理管理操作 -->
+                <div class="config-section">
+                    <div class="config-title">代理管理</div>
+                    <button class="btn btn-primary" id="addProxy">新增代理</button>
+                    <button class="btn btn-primary" id="saveProxyConfig">保存代理配置</button>
+                </div>
+
+                <!-- 代理列表容器 -->
+                <div id="proxyListContainer">
+                    <!-- 代理配置项将动态插入这里 -->
                 </div>
             </div>
         </div>
@@ -690,10 +772,12 @@
                 this.needsReset = false;
                 this.openingMessage = '';
                 this.nextSpeaker = 'B';
-                this.pausedByError = false; // 新增：标记是否由错误导致的暂停
-                this.lastMessageFailed = false; // 新增：标记最后一条消息是否失败
                 // 新增：用于跟踪当前正在流式显示的消息
                 this.currentStreamingMessageId = null;
+
+                // 代理配置相关
+                this.proxies = new Map(); // 存储所有代理配置
+                this.currentTab = 'ai-config'; // 当前激活的Tab
                 
                 // 新增：跟踪每个AI当前的端点类型
                 this.currentEndpointTypes = {
@@ -701,6 +785,9 @@
                     'B': 'openai', 
                     'System': 'openai'
                 };
+                
+                // 新增：跟踪全局配置当前的端点类型
+                this.currentGlobalEndpointType = 'openai';
                 
                 // ====== 上下文压缩功能相关属性 ======
                 this.enableCompression = false; // 是否启用压缩
@@ -717,6 +804,8 @@
                 };
 
                 this.initializeElements();
+                this.loadProxyConfiguration(); // 先加载代理配置
+                this.updateProxySelectors(); // 更新代理下拉选择器
                 this.loadConfiguration();
                 this.setupEventListeners();
                 this.updateUI();
@@ -728,22 +817,14 @@
             initializeElements() {
                 // 配置元素
                 this.elements = {
-                    endpointTypeA: document.getElementById('endpointTypeA'),
-                    apiUrlA: document.getElementById('apiUrlA'),
-                    apiKeyA: document.getElementById('apiKeyA'),
-                    modelA: document.getElementById('modelA'),
+                    // AI配置（使用代理选择）
+                    proxySelectA: document.getElementById('proxySelectA'),
                     promptA: document.getElementById('promptA'),
 
-                    endpointTypeB: document.getElementById('endpointTypeB'),
-                    apiUrlB: document.getElementById('apiUrlB'),
-                    apiKeyB: document.getElementById('apiKeyB'),
-                    modelB: document.getElementById('modelB'),
+                    proxySelectB: document.getElementById('proxySelectB'),
                     promptB: document.getElementById('promptB'),
 
-                    endpointTypeSystem: document.getElementById('endpointTypeSystem'),
-                    apiUrlSystem: document.getElementById('apiUrlSystem'),
-                    apiKeySystem: document.getElementById('apiKeySystem'),
-                    modelSystem: document.getElementById('modelSystem'),
+                    proxySelectSystem: document.getElementById('proxySelectSystem'),
                     promptSystem: document.getElementById('promptSystem'),
 
                     maxRounds: document.getElementById('maxRounds'),
@@ -762,30 +843,58 @@
                     saveConfig: document.getElementById('saveConfig'),
                     startChat: document.getElementById('startChat'),
                     pauseChat: document.getElementById('pauseChat'),
+                    resumeChat: document.getElementById('resumeChat'),
+                    stopChat: document.getElementById('stopChat'),
                     exportChat: document.getElementById('exportChat'),
                     clearChat: document.getElementById('clearChat'),
                     retryChat: document.getElementById('retryChat'),
-                    sendOpening: document.getElementById('sendOpening')
+                    sendOpening: document.getElementById('sendOpening'),
+
+                    // Tab和代理相关元素
+                    addProxy: document.getElementById('addProxy'),
+                    saveProxyConfig: document.getElementById('saveProxyConfig'),
+                    proxyListContainer: document.getElementById('proxyListContainer'),
+
+                    // 配置导入导出
+                    exportConfig: document.getElementById('exportConfig'),
+                    importConfig: document.getElementById('importConfig'),
+                    importConfigFile: document.getElementById('importConfigFile')
                 };
             }
 
             setupEventListeners() {
-                // 端点类型变化时切换配置
-                this.elements.endpointTypeA.addEventListener('change', (e) => this.switchEndpointConfig('A', e));
-                this.elements.endpointTypeB.addEventListener('change', (e) => this.switchEndpointConfig('B', e));
-                this.elements.endpointTypeSystem.addEventListener('change', (e) => this.switchEndpointConfig('System', e));
-                
+                // 代理选择器变化事件
+                this.elements.proxySelectA.addEventListener('change', () => this.updateProxySelectors());
+                this.elements.proxySelectB.addEventListener('change', () => this.updateProxySelectors());
+                this.elements.proxySelectSystem.addEventListener('change', () => this.updateProxySelectors());
+
                 // 压缩功能相关事件
                 this.elements.enableCompression.addEventListener('change', () => this.updateCompressionStatsUI());
 
                 // 按钮事件
                 this.elements.saveConfig.addEventListener('click', () => this.saveConfiguration());
                 this.elements.startChat.addEventListener('click', () => this.startDialogue());
-                this.elements.pauseChat.addEventListener('click', () => this.togglePauseResume());
+                this.elements.pauseChat.addEventListener('click', () => this.pauseDialogue());
+                this.elements.resumeChat.addEventListener('click', () => this.resumeDialogue());
+                this.elements.stopChat.addEventListener('click', () => this.stopDialogue());
                 this.elements.exportChat.addEventListener('click', () => this.exportDialogue());
                 this.elements.clearChat.addEventListener('click', () => this.clearDialogue());
                 this.elements.retryChat.addEventListener('click', () => this.retryLastRequest());
                 this.elements.sendOpening.addEventListener('click', () => this.sendOpeningMessage());
+
+                // Tab切换事件
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
+                });
+
+                // 代理管理事件
+                this.elements.addProxy.addEventListener('click', () => this.addNewProxy());
+                this.elements.saveProxyConfig.addEventListener('click', () => this.saveProxyConfiguration());
+
+                // 配置导入导出事件
+                this.elements.exportConfig.addEventListener('click', () => this.exportConfiguration());
+                this.elements.importConfig.addEventListener('click', () => this.elements.importConfigFile.click());
+                this.elements.importConfigFile.addEventListener('change', (e) => this.importConfiguration(e));
 
                 // 回车发送
                 this.elements.openingMessage.addEventListener('keypress', (e) => {
@@ -794,167 +903,39 @@
             }
 
             /**
-             * 切换端点配置（保存当前配置，加载目标端点配置）
-             * @param {string} aiType - AI类型 ('A', 'B', 'System')
-             * @param {Event} event - 切换事件
+             * 更新代理选择器
              */
-            switchEndpointConfig(aiType, event) {
-                const newEndpointType = event.target.value;
-                const previousEndpointType = this.currentEndpointTypes[aiType];
-                
-                console.log(`${aiType}: 从 ${previousEndpointType} 切换到 ${newEndpointType}`);
-                
-                // 如果端点类型没有变化，不需要切换
-                if (previousEndpointType === newEndpointType) {
-                    return;
-                }
-                
-                // 先保存当前显示的配置到切换前的端点类型
-                this.saveCurrentEndpointConfigToType(aiType, previousEndpointType);
-                
-                // 更新当前端点类型跟踪
-                this.currentEndpointTypes[aiType] = newEndpointType;
-                
-                // 然后加载新端点的配置
-                this.loadEndpointConfig(aiType);
-            }
+            updateProxySelectors() {
+                const selectors = [
+                    this.elements.proxySelectA,
+                    this.elements.proxySelectB,
+                    this.elements.proxySelectSystem
+                ];
 
-            /**
-             * 保存当前端点的配置
-             * @param {string} aiType - AI类型
-             */
-            saveCurrentEndpointConfig(aiType) {
-                // 获取当前的端点类型和配置
-                const currentEndpointType = this.elements[`endpointType${aiType}`].value;
-                this.saveCurrentEndpointConfigToType(aiType, currentEndpointType);
-            }
+                selectors.forEach(selector => {
+                    if (!selector) return;
 
-            /**
-             * 保存当前显示的配置到指定的端点类型
-             * @param {string} aiType - AI类型
-             * @param {string} endpointType - 端点类型
-             */
-            saveCurrentEndpointConfigToType(aiType, endpointType) {
-                const currentConfig = {
-                    apiUrl: this.elements[`apiUrl${aiType}`].value,
-                    apiKey: this.elements[`apiKey${aiType}`].value,
-                    model: this.elements[`model${aiType}`].value,
-                    prompt: this.elements[`prompt${aiType}`].value
-                };
+                    const currentValue = selector.value;
 
-                // 只有在有实际配置内容时才保存
-                if (currentConfig.apiUrl.trim() || currentConfig.apiKey.trim() || currentConfig.model.trim()) {
-                    const endpointConfigs = this.getEndpointConfigs();
-                    if (!endpointConfigs[aiType]) {
-                        endpointConfigs[aiType] = {};
+                    // 清空现有选项，保留默认选项
+                    selector.innerHTML = '<option value="">请选择代理配置</option>';
+
+                    // 添加代理选项
+                    for (const [id, proxy] of this.proxies) {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = `${proxy.name} (${proxy.modelName})`;
+                        selector.appendChild(option);
                     }
-                    endpointConfigs[aiType][endpointType] = currentConfig;
-                    this.saveEndpointConfigs(endpointConfigs);
-                    
-                    console.log(`保存 ${aiType} 的 ${endpointType} 配置:`, currentConfig);
-                }
-            }
 
-            /**
-             * 加载指定端点的配置
-             * @param {string} aiType - AI类型
-             */
-            loadEndpointConfig(aiType) {
-                const targetEndpointType = this.elements[`endpointType${aiType}`].value;
-                const endpointConfigs = this.getEndpointConfigs();
-                
-                // 尝试加载已保存的配置
-                const savedConfig = endpointConfigs[aiType]?.[targetEndpointType];
-                
-                if (savedConfig) {
-                    // 加载已保存的配置
-                    this.elements[`apiUrl${aiType}`].value = savedConfig.apiUrl || '';
-                    this.elements[`apiKey${aiType}`].value = savedConfig.apiKey || '';
-                    this.elements[`model${aiType}`].value = savedConfig.model || '';
-                    this.elements[`prompt${aiType}`].value = savedConfig.prompt || '';
-                    
-                    console.log(`加载 ${aiType} 的 ${targetEndpointType} 已保存配置:`, savedConfig);
-                } else {
-                    // 没有保存的配置，使用默认值
-                    this.updateDefaults(aiType, true);
-                    console.log(`${aiType} 的 ${targetEndpointType} 没有保存的配置，使用默认值`);
-                }
-            }
-
-            /**
-             * 获取端点配置
-             * @returns {Object} 端点配置对象
-             */
-            getEndpointConfigs() {
-                const saved = localStorage.getItem('aiDialogueEndpointConfigs');
-                return saved ? JSON.parse(saved) : {};
-            }
-
-            /**
-             * 保存端点配置
-             * @param {Object} configs - 端点配置对象
-             */
-            saveEndpointConfigs(configs) {
-                localStorage.setItem('aiDialogueEndpointConfigs', JSON.stringify(configs));
-            }
-
-            updateDefaults(aiType, forceUpdate = false) {
-                const endpointType = this.elements[`endpointType${aiType}`].value;
-
-                if (endpointType === 'openai') {
-                    if (aiType === 'System') {
-                        // 系统AI使用低成本模型
-                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
-                            this.elements[`apiUrl${aiType}`].value = 'https://xxx.com';
-                        }
-                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
-                            this.elements[`apiKey${aiType}`].value = 'sk-xxx';
-                        }
-                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
-                            this.elements[`model${aiType}`].value = 'gpt-3.5-turbo';
-                        }
-                        if (forceUpdate || !this.elements[`prompt${aiType}`].value.trim()) {
-                            this.elements[`prompt${aiType}`].value = this.getDefaultCompressionPromptTemplate();
-                        }
-                    } else {
-                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
-                            this.elements[`apiUrl${aiType}`].value = 'https://xxx.com';
-                        }
-                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
-                            this.elements[`apiKey${aiType}`].value = 'sk-xxx';
-                        }
-                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
-                            this.elements[`model${aiType}`].value = 'gpt-4';
-                        }
+                    // 恢复之前选择的值
+                    if (currentValue) {
+                        selector.value = currentValue;
                     }
-                } else if (endpointType === 'gemini') {
-                    if (aiType === 'System') {
-                        // 系统AI使用低成本模型
-                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
-                            this.elements[`apiUrl${aiType}`].value = 'https://generativelanguage.googleapis.com';
-                        }
-                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
-                            this.elements[`apiKey${aiType}`].value = 'akxxx';
-                        }
-                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
-                            this.elements[`model${aiType}`].value = 'gemini-1.5-flash';
-                        }
-                        if (forceUpdate || !this.elements[`prompt${aiType}`].value.trim()) {
-                            this.elements[`prompt${aiType}`].value = this.getDefaultCompressionPromptTemplate();
-                        }
-                    } else {
-                        if (forceUpdate || !this.elements[`apiUrl${aiType}`].value.trim()) {
-                            this.elements[`apiUrl${aiType}`].value = 'https://generativelanguage.googleapis.com';
-                        }
-                        if (forceUpdate || !this.elements[`apiKey${aiType}`].value.trim()) {
-                            this.elements[`apiKey${aiType}`].value = 'akxxx';
-                        }
-                        if (forceUpdate || !this.elements[`model${aiType}`].value.trim()) {
-                            this.elements[`model${aiType}`].value = 'gemini-2.5-pro';
-                        }
-                    }
-                }
+                });
             }
+
+
 
             loadConfiguration() {
                 const saved = localStorage.getItem('aiDialogueConfig');
@@ -969,44 +950,33 @@
                             }
                         }
                     });
-                    
-                    // 初始化端点类型跟踪
-                    ['A', 'B', 'System'].forEach(aiType => {
-                        this.currentEndpointTypes[aiType] = this.elements[`endpointType${aiType}`].value;
-                    });
-                    
-                    // 加载完通用配置后，为每个AI加载对应端点的配置
-                    ['A', 'B', 'System'].forEach(aiType => {
-                        this.loadEndpointConfig(aiType);
-                    });
-                    
+
+                    // 恢复AI选择的代理
+                    if (config.selectedProxyA && this.proxies.has(config.selectedProxyA)) {
+                        this.elements.proxySelectA.value = config.selectedProxyA;
+                    }
+                    if (config.selectedProxyB && this.proxies.has(config.selectedProxyB)) {
+                        this.elements.proxySelectB.value = config.selectedProxyB;
+                    }
+                    if (config.selectedProxySystem && this.proxies.has(config.selectedProxySystem)) {
+                        this.elements.proxySelectSystem.value = config.selectedProxySystem;
+                    }
+
                     // 确保系统AI提示词有默认值（如果为空的话）
                     if (!this.elements.promptSystem.value.trim()) {
                         this.elements.promptSystem.value = this.getDefaultCompressionPromptTemplate();
                     }
                 } else {
-                    // 初始化端点类型跟踪为默认值
-                    ['A', 'B', 'System'].forEach(aiType => {
-                        this.currentEndpointTypes[aiType] = this.elements[`endpointType${aiType}`].value;
-                    });
-                    
-                    // 设置默认值（不强制更新，只在字段为空时设置）
-                    this.updateDefaults('A', false);
-                    this.updateDefaults('B', false);
-                    this.updateDefaults('System', false);
+                    // 设置默认的系统AI提示词
+                    this.elements.promptSystem.value = this.getDefaultCompressionPromptTemplate();
                 }
-                
+
                 // 更新压缩统计UI
                 this.updateCompressionStatsUI();
             }
 
             saveConfiguration() {
-                // 保存当前所有端点的配置
-                ['A', 'B', 'System'].forEach(aiType => {
-                    this.saveCurrentEndpointConfig(aiType);
-                });
-
-                // 保存通用配置
+                // 保存AI配置
                 const config = {};
                 Object.keys(this.elements).forEach(key => {
                     if (this.elements[key]) {
@@ -1017,8 +987,14 @@
                         }
                     }
                 });
+
+                // 额外保存AI选择的代理ID
+                config.selectedProxyA = this.elements.proxySelectA.value;
+                config.selectedProxyB = this.elements.proxySelectB.value;
+                config.selectedProxySystem = this.elements.proxySelectSystem.value;
+
                 localStorage.setItem('aiDialogueConfig', JSON.stringify(config));
-                this.showMessage('配置已保存', 'success');
+                this.showMessage('AI配置已保存', 'success');
             }
 
             /**
@@ -1158,30 +1134,18 @@
                 this.isRunning = true;
                 this.isPaused = false;
                 this.needsReset = false;
-                this.pausedByError = false;
-                this.lastMessageFailed = false;
                 this.updateUI();
 
                 await this.runDialogue();
             }
 
-            togglePauseResume() {
-                if (this.isPaused) {
-                    this.resumeDialogue();
-                } else {
-                    this.pauseDialogue();
-                }
-            }
-
             pauseDialogue() {
                 this.isPaused = true;
-                this.pausedByError = false;
                 this.updateUI();
             }
 
             resumeDialogue() {
                 this.isPaused = false;
-                this.pausedByError = false;
                 if (this.needsReset) {
                     this.currentRound = 0;
                     this.needsReset = false;
@@ -1214,6 +1178,14 @@
                 } else {
                     this.nextSpeaker = 'A';
                 }
+            }
+
+            stopDialogue() {
+                this.isRunning = false;
+                this.isPaused = false;
+                // 清除当前流式消息ID
+                this.currentStreamingMessageId = null;
+                this.updateUI();
             }
 
             async sendOpeningMessage() {
@@ -1256,8 +1228,6 @@
                 this.isRunning = true;
                 this.isPaused = false;
                 this.needsReset = false;
-                this.pausedByError = false;
-                this.lastMessageFailed = false;
                 this.updateUI();
 
                 await this.runDialogue();
@@ -1268,7 +1238,6 @@
                     if (this.maxRounds > 0 && this.currentRound >= this.maxRounds) {
                         this.isPaused = true;
                         this.needsReset = true;
-                        this.pausedByError = false;
                         this.updateUI();
                         break;
                     }
@@ -1278,13 +1247,10 @@
 
                     if (!success) {
                         this.isPaused = true;
-                        this.pausedByError = true;
-                        this.lastMessageFailed = true;
                         this.updateUI();
                         break;
                     }
 
-                    this.lastMessageFailed = false;
                     this.currentRound++;
                     this.updateRoundCounter();
 
@@ -1369,14 +1335,6 @@
                         } else {
                             // 重试次数用完，显示错误消息
                             this.addMessageToUI(`AI ${aiType}`, `❌ 调用失败，已达重试上限: ${error.message}`, false, loadingMessageId);
-                            
-                            // 将失败消息添加到会话历史，方便后续删除
-                            this.conversations.push({
-                                role: 'assistant',
-                                content: `❌ 调用失败，已达重试上限: ${error.message}`,
-                                speaker: `AI ${aiType}`
-                            });
-                            
                             this.showMessage(`AI ${aiType} 调用失败，已达重试上限`, 'error');
                             this.setStatus('错误', 'stopped');
                             this.currentStreamingMessageId = null;
@@ -1625,11 +1583,24 @@
             // ====== 辅助方法和事件处理 ======
 
             getAIConfig(aiType) {
+                // 获取选择的代理ID
+                const proxyId = this.elements[`proxySelect${aiType}`].value;
+
+                if (!proxyId) {
+                    throw new Error(`AI ${aiType} 未选择代理配置`);
+                }
+
+                // 从代理配置中获取信息
+                const proxy = this.proxies.get(proxyId);
+                if (!proxy) {
+                    throw new Error(`AI ${aiType} 选择的代理配置不存在`);
+                }
+
                 return {
-                    endpointType: this.elements[`endpointType${aiType}`].value,
-                    apiUrl: this.elements[`apiUrl${aiType}`].value,
-                    apiKey: this.elements[`apiKey${aiType}`].value,
-                    model: this.elements[`model${aiType}`].value,
+                    endpointType: proxy.endpoint,
+                    apiUrl: proxy.apiUrl,
+                    apiKey: proxy.apiKey,
+                    model: proxy.modelName,
                     prompt: this.elements[`prompt${aiType}`].value
                 };
             }
@@ -1698,24 +1669,58 @@
             }
 
             validateConfiguration() {
-                const requiredFields = ['apiUrlA', 'apiKeyA', 'modelA', 'apiUrlB', 'apiKeyB', 'modelB'];
-
-                for (const field of requiredFields) {
-                    if (!this.elements[field].value.trim()) {
-                        this.showMessage(`请填写完整的配置信息: ${field}`, 'error');
-                        return false;
-                    }
+                // 验证AI A配置
+                if (!this.validateAIConfig('A')) {
+                    return false;
+                }
+                
+                // 验证AI B配置
+                if (!this.validateAIConfig('B')) {
+                    return false;
                 }
 
                 // 如果启用AI压缩，验证系统AI配置
                 if (this.enableCompression) {
-                    const systemFields = ['apiUrlSystem', 'apiKeySystem', 'modelSystem'];
-                    for (const field of systemFields) {
-                        if (!this.elements[field].value.trim()) {
-                            this.showMessage(`AI压缩需要完整的系统AI配置: ${field}`, 'error');
-                            return false;
-                        }
+                    if (!this.validateAIConfig('System')) {
+                        return false;
                     }
+                }
+
+                return true;
+            }
+
+            /**
+             * 验证单个AI的配置
+             * @param {string} aiType - AI类型
+             * @returns {boolean} 配置是否有效
+             */
+            validateAIConfig(aiType) {
+                // 检查是否选择了代理
+                const proxyId = this.elements[`proxySelect${aiType}`].value;
+                if (!proxyId) {
+                    this.showMessage(`AI ${aiType} 未选择代理配置`, 'error');
+                    return false;
+                }
+
+                // 检查代理是否存在
+                const proxy = this.proxies.get(proxyId);
+                if (!proxy) {
+                    this.showMessage(`AI ${aiType} 选择的代理配置不存在`, 'error');
+                    return false;
+                }
+
+                // 检查代理配置是否完整
+                if (!proxy.apiUrl.trim()) {
+                    this.showMessage(`代理"${proxy.name}"的API地址未填写`, 'error');
+                    return false;
+                }
+                if (!proxy.apiKey.trim()) {
+                    this.showMessage(`代理"${proxy.name}"的API密钥未填写`, 'error');
+                    return false;
+                }
+                if (!proxy.modelName.trim()) {
+                    this.showMessage(`代理"${proxy.name}"的模型名称未填写`, 'error');
+                    return false;
                 }
 
                 return true;
@@ -1736,18 +1741,8 @@
                 const isPaused = this.isPaused;
 
                 this.elements.startChat.style.display = isStopped ? 'inline-block' : 'none';
-                
-                // 暂停/继续按钮切换
-                if (isPaused) {
-                    this.elements.pauseChat.textContent = '继续';
-                    this.elements.pauseChat.className = 'btn btn-success';
-                } else if (isRunning) {
-                    this.elements.pauseChat.textContent = '暂停';
-                    this.elements.pauseChat.className = 'btn btn-warning';
-                }
-                this.elements.pauseChat.style.display = (isRunning || isPaused) ? 'inline-block' : 'none';
-                
-                // 重试按钮只在暂停时显示
+                this.elements.pauseChat.style.display = isRunning ? 'inline-block' : 'none';
+                this.elements.resumeChat.style.display = isPaused ? 'inline-block' : 'none';
                 this.elements.retryChat.style.display = isPaused ? 'inline-block' : 'none';
 
                 // 更新状态指示器
@@ -1761,95 +1756,10 @@
             }
 
             async retryLastRequest() {
-                if (!this.isPaused) {
-                    this.showMessage('只能在暂停状态下重试', 'error');
-                    return;
-                }
-
-                if (this.conversations.length === 0) {
-                    this.showMessage('没有消息可以重试', 'error');
-                    return;
-                }
-
-                // 找到最后一条AI消息并确定是哪个AI
-                let lastAIMessage = null;
-                let lastAISpeaker = null;
-                
-                for (let i = this.conversations.length - 1; i >= 0; i--) {
-                    const conv = this.conversations[i];
-                    if (conv.speaker === 'AI A' || conv.speaker === 'AI B') {
-                        lastAIMessage = conv;
-                        lastAISpeaker = conv.speaker === 'AI A' ? 'A' : 'B';
-                        break;
-                    }
-                }
-
-                if (!lastAIMessage) {
-                    this.showMessage('没有找到可重试的AI消息', 'error');
-                    return;
-                }
-
-                // 删除最后一条AI消息及其之后的所有消息
-                const indexToRemove = this.conversations.indexOf(lastAIMessage);
-                this.conversations.splice(indexToRemove, this.conversations.length - indexToRemove);
-
-                // 从UI中删除对应的消息
-                const messagesContainer = this.elements.chatMessages;
-                const allMessages = Array.from(messagesContainer.children);
-                
-                // 计算要删除的UI消息数量（倒序查找第一个AI消息）
-                let foundAIMessage = false;
-                const messagesToRemove = [];
-                
-                for (let i = allMessages.length - 1; i >= 0; i--) {
-                    const child = allMessages[i];
-                    messagesToRemove.push(child);
-                    
-                    if (child.classList && (child.classList.contains('message-a') || child.classList.contains('message-b'))) {
-                        foundAIMessage = true;
-                        break;
-                    }
-                }
-                
-                messagesToRemove.forEach(msg => msg.remove());
-
-                // 重置重试计数器
-                this.currentRetries = 0;
-                
-                this.addSystemMessage(`🔄 重试 AI ${lastAISpeaker} 的请求...`, 'info');
-
-                // 执行单次重试（重试刚才删除的AI）
-                const success = await this.callAI(lastAISpeaker);
-
-                if (success) {
-                    // 重试成功
-                    this.lastMessageFailed = false;
-                    
-                    if (this.pausedByError) {
-                        // 如果是由错误导致的暂停，重试成功后自动继续
-                        this.addSystemMessage('✅ 重试成功，自动继续对话...', 'success');
-                        this.pausedByError = false;
-                        
-                        // 更新轮次和发言者（切换到下一个AI）
-                        this.currentRound++;
-                        this.updateRoundCounter();
-                        this.nextSpeaker = lastAISpeaker === 'A' ? 'B' : 'A';
-                        
-                        // 继续对话
-                        this.isPaused = false;
-                        this.updateUI();
-                        await this.sleep(1000);
-                        await this.runDialogue();
-                    } else {
-                        // 如果是手动暂停，重试成功后保持暂停状态
-                        this.addSystemMessage('✅ 重试成功，保持暂停状态', 'success');
-                        this.updateUI();
-                    }
-                } else {
-                    // 重试失败
-                    this.lastMessageFailed = true;
-                    this.addSystemMessage('❌ 重试失败，保持暂停状态', 'error');
-                    this.updateUI();
+                if (this.isPaused) {
+                    // 重试时也需要更新下一个发言者
+                    this.updateNextSpeaker();
+                    this.resumeDialogue();
                 }
             }
 
@@ -1895,8 +1805,6 @@
                     this.openingMessage = '';
                     this.nextSpeaker = 'B';
                     this.currentStreamingMessageId = null;
-                    this.pausedByError = false;
-                    this.lastMessageFailed = false;
                     
                     // 重置压缩统计和缓存
                     this.compressedMessages = [];
@@ -3139,13 +3047,13 @@
             updateCompressionStatsUI() {
                 const statsSection = document.getElementById('compressionStatsSection');
                 const statsDiv = document.getElementById('compressionStats');
-                
+
                 if (this.enableCompression && this.compressionStats.compressionCount > 0) {
                     const stats = this.compressionStats;
                     const totalSaved = stats.originalTokens - stats.compressedTokens;
                     const netSaved = totalSaved - (stats.aiCompressionTokens || 0);
                     const avgSavedPercentage = ((totalSaved / stats.originalTokens) * 100).toFixed(1);
-                    
+
                     let statsHtml = `
                         📊 压缩次数: ${stats.compressionCount}<br>
                         💾 节省Token: ${totalSaved} (${avgSavedPercentage}%)<br>
@@ -3154,7 +3062,7 @@
                         🤖 AI压缩成本: ${stats.aiCompressionTokens} tokens<br>
                         💰 净节省: ${netSaved} tokens
                     `;
-                    
+
                     statsDiv.innerHTML = statsHtml;
                     statsSection.style.display = 'block';
                 } else if (this.enableCompression) {
@@ -3168,6 +3076,370 @@
                 } else {
                     statsSection.style.display = 'none';
                 }
+            }
+
+            // ====== Tab切换和代理管理功能 ======
+
+            /**
+             * 切换Tab
+             * @param {string} tabId - Tab ID
+             */
+            switchTab(tabId) {
+                // 更新按钮状态
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+                // 切换内容显示
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                document.getElementById(tabId).style.display = 'block';
+
+                this.currentTab = tabId;
+
+                // 如果切换到代理配置页面，刷新代理列表
+                if (tabId === 'proxy-config') {
+                    this.renderProxyList();
+                }
+            }
+
+            /**
+             * 生成唯一ID
+             * @returns {string} 唯一ID
+             */
+            generateId() {
+                return 'proxy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            }
+
+            /**
+             * 添加新代理
+             */
+            addNewProxy() {
+                const newProxy = {
+                    id: this.generateId(),
+                    name: '新代理',
+                    endpoint: 'openai',
+                    apiUrl: 'https://xxx.com',
+                    apiKey: 'sk-xxx',
+                    modelName: 'gpt-4'
+                };
+
+                this.proxies.set(newProxy.id, newProxy);
+                this.renderProxyList();
+                this.updateProxySelectors(); // 添加后更新选择器
+            }
+
+            /**
+             * 渲染代理列表
+             */
+            renderProxyList() {
+                const container = this.elements.proxyListContainer;
+
+                if (this.proxies.size === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 30px;">
+                            <p>暂无代理配置</p>
+                            <p style="font-size: 12px;">点击"新增代理"按钮添加第一个代理配置</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 将Map转换为数组并按创建时间倒序排列（新的在前）
+                const proxiesArray = Array.from(this.proxies.entries()).reverse();
+
+                let html = '';
+                for (const [id, proxy] of proxiesArray) {
+                    html += this.createProxyItemHTML(proxy);
+                }
+
+                container.innerHTML = html;
+
+                // 添加事件监听
+                this.setupProxyItemListeners();
+            }
+
+            /**
+             * 创建代理配置项HTML
+             * @param {Object} proxy - 代理配置对象
+             * @returns {string} HTML字符串
+             */
+            createProxyItemHTML(proxy) {
+                return `
+                    <div class="proxy-item" data-proxy-id="${proxy.id}">
+                        <div class="proxy-item-header">
+                            <div class="proxy-item-title">${proxy.name}</div>
+                            <div class="proxy-item-actions">
+                                <button class="btn btn-danger btn-small proxy-delete" data-proxy-id="${proxy.id}">删除</button>
+                            </div>
+                        </div>
+
+                        <div class="proxy-form-row">
+                            <div class="form-group">
+                                <label class="form-label">代理名称</label>
+                                <input type="text" class="form-input proxy-name" value="${proxy.name}" data-proxy-id="${proxy.id}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">端点类型</label>
+                                <select class="form-select proxy-endpoint" data-proxy-id="${proxy.id}">
+                                    <option value="openai" ${proxy.endpoint === 'openai' ? 'selected' : ''}>OpenAI</option>
+                                    <option value="gemini" ${proxy.endpoint === 'gemini' ? 'selected' : ''}>Gemini</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="proxy-form-row">
+                            <div class="form-group">
+                                <label class="form-label">API地址</label>
+                                <input type="text" class="form-input proxy-apiurl" value="${proxy.apiUrl}" data-proxy-id="${proxy.id}">
+                                <div class="api-hint">OpenAI: 系统会自动补全 /v1/chat/completions，如需使用完整地址请在末尾加#</div>
+                            </div>
+                        </div>
+
+                        <div class="proxy-form-row">
+                            <div class="form-group">
+                                <label class="form-label">API密钥</label>
+                                <input type="text" class="form-input proxy-apikey" value="${proxy.apiKey}" data-proxy-id="${proxy.id}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">模型名称</label>
+                                <input type="text" class="form-input proxy-modelname" value="${proxy.modelName}" data-proxy-id="${proxy.id}">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            /**
+             * 设置代理配置项的事件监听
+             */
+            setupProxyItemListeners() {
+                // 删除代理
+                document.querySelectorAll('.proxy-delete').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const proxyId = e.target.dataset.proxyId;
+                        this.deleteProxy(proxyId);
+                    });
+                });
+
+                // 监听输入变化，实时更新数据
+                document.querySelectorAll('.proxy-name').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const proxyId = e.target.dataset.proxyId;
+                        const proxy = this.proxies.get(proxyId);
+                        if (proxy) {
+                            proxy.name = e.target.value;
+                            // 更新标题显示
+                            const titleElement = e.target.closest('.proxy-item').querySelector('.proxy-item-title');
+                            titleElement.textContent = e.target.value;
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.proxy-endpoint').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const proxyId = e.target.dataset.proxyId;
+                        const proxy = this.proxies.get(proxyId);
+                        if (proxy) {
+                            proxy.endpoint = e.target.value;
+                            // 根据端点类型更新默认值
+                            this.updateProxyDefaults(proxyId, e.target.value);
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.proxy-apiurl').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const proxyId = e.target.dataset.proxyId;
+                        const proxy = this.proxies.get(proxyId);
+                        if (proxy) {
+                            proxy.apiUrl = e.target.value;
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.proxy-apikey').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const proxyId = e.target.dataset.proxyId;
+                        const proxy = this.proxies.get(proxyId);
+                        if (proxy) {
+                            proxy.apiKey = e.target.value;
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.proxy-modelname').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const proxyId = e.target.dataset.proxyId;
+                        const proxy = this.proxies.get(proxyId);
+                        if (proxy) {
+                            proxy.modelName = e.target.value;
+                        }
+                    });
+                });
+            }
+
+            /**
+             * 删除代理配置
+             * @param {string} proxyId - 代理ID
+             */
+            deleteProxy(proxyId) {
+                if (confirm('确定要删除这个代理配置吗？')) {
+                    this.proxies.delete(proxyId);
+                    this.renderProxyList();
+                    this.updateProxySelectors(); // 删除后更新选择器
+                }
+            }
+
+            /**
+             * 根据端点类型更新代理的默认值
+             * @param {string} proxyId - 代理ID
+             * @param {string} endpoint - 端点类型
+             */
+            updateProxyDefaults(proxyId, endpoint) {
+                const proxy = this.proxies.get(proxyId);
+                if (!proxy) return;
+
+                if (endpoint === 'openai') {
+                    proxy.apiUrl = 'https://xxx.com';
+                    proxy.apiKey = 'sk-xxx';
+                    proxy.modelName = 'gpt-4';
+                } else if (endpoint === 'gemini') {
+                    proxy.apiUrl = 'https://generativelanguage.googleapis.com';
+                    proxy.apiKey = 'akxxx';
+                    proxy.modelName = 'gemini-2.5-pro';
+                }
+
+                // 重新渲染以更新UI
+                this.renderProxyList();
+            }
+
+            /**
+             * 保存代理配置
+             */
+            saveProxyConfiguration() {
+                const proxiesData = {};
+                for (const [id, proxy] of this.proxies) {
+                    proxiesData[id] = proxy;
+                }
+
+                localStorage.setItem('aiDialogueProxies', JSON.stringify(proxiesData));
+                this.updateProxySelectors(); // 保存后更新选择器
+                this.showMessage('代理配置已保存', 'success');
+            }
+
+            /**
+             * 加载代理配置
+             */
+            loadProxyConfiguration() {
+                const saved = localStorage.getItem('aiDialogueProxies');
+                if (saved) {
+                    const proxiesData = JSON.parse(saved);
+                    this.proxies.clear();
+
+                    for (const [id, proxy] of Object.entries(proxiesData)) {
+                        this.proxies.set(id, proxy);
+                    }
+
+                    console.log('已加载代理配置:', this.proxies.size, '个代理');
+                }
+            }
+
+            // ====== 配置导入导出功能 ======
+
+            /**
+             * 导出配置
+             */
+            exportConfiguration() {
+                try {
+                    // 收集所有配置数据
+                    const exportData = {
+                        version: '1.0',
+                        timestamp: new Date().toISOString(),
+
+                        // AI配置
+                        aiConfig: JSON.parse(localStorage.getItem('aiDialogueConfig') || '{}'),
+
+                        // 代理配置
+                        proxies: {}
+                    };
+
+                    // 导出代理配置
+                    for (const [id, proxy] of this.proxies) {
+                        exportData.proxies[id] = proxy;
+                    }
+
+                    // 创建下载文件
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ai_dialogue_config_${new Date().getTime()}.json`;
+                    a.click();
+
+                    URL.revokeObjectURL(url);
+                    this.showMessage('配置导出成功', 'success');
+                } catch (error) {
+                    console.error('导出配置失败:', error);
+                    this.showMessage('配置导出失败: ' + error.message, 'error');
+                }
+            }
+
+            /**
+             * 导入配置
+             * @param {Event} event - 文件选择事件
+             */
+            importConfiguration(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importData = JSON.parse(e.target.result);
+
+                        // 验证配置文件格式
+                        if (!importData.version || !importData.aiConfig || !importData.proxies) {
+                            throw new Error('配置文件格式不正确');
+                        }
+
+                        // 确认导入
+                        if (!confirm('导入配置将覆盖当前所有配置，确定继续吗？')) {
+                            return;
+                        }
+
+                        // 导入AI配置
+                        localStorage.setItem('aiDialogueConfig', JSON.stringify(importData.aiConfig));
+
+                        // 导入代理配置
+                        this.proxies.clear();
+                        for (const [id, proxy] of Object.entries(importData.proxies)) {
+                            this.proxies.set(id, proxy);
+                        }
+                        localStorage.setItem('aiDialogueProxies', JSON.stringify(importData.proxies));
+
+                        // 重新加载配置到UI
+                        this.loadConfiguration();
+                        this.updateProxySelectors();
+                        this.renderProxyList();
+
+                        this.showMessage('配置导入成功', 'success');
+
+                        // 清空文件选择器
+                        event.target.value = '';
+
+                    } catch (error) {
+                        console.error('导入配置失败:', error);
+                        this.showMessage('配置导入失败: ' + error.message, 'error');
+                        event.target.value = '';
+                    }
+                };
+
+                reader.readAsText(file);
             }
         }
 
