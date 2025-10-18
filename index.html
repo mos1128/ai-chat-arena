@@ -1158,17 +1158,14 @@
                 this.enableCompression = this.elements.enableCompression.checked;
                 this.compressionRatio = parseFloat(this.elements.compressionRatio.value) || 0.5;
                 this.keepRecentCount = parseInt(this.elements.keepRecentCount.value) || 5;
-                this.retryCount = parseInt(this.elements.retryCount.value) || 3;
+                this.retryCount = parseInt(this.elements.retryCount.value);
+                if (isNaN(this.retryCount) || this.retryCount < 0) this.retryCount = 0;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
-                // 如果是自动暂停（失败导致），需要切换到下一个AI
-                // 如果是手动暂停，保持当前nextSpeaker不变
-                if (!wasManuallyPaused) {
-                    // 自动暂停：切换到下一个AI
-                    this.updateNextSpeaker();
-                    this.addSystemMessage('⚠️ 上次失败，切换到下一个AI继续对话', 'info');
-                }
-                // 手动暂停：不调用updateNextSpeaker，保持当前的nextSpeaker
+                // 无论是自动暂停还是手动暂停，都不修改nextSpeaker
+                // 因为nextSpeaker始终指向下一个应该发言的AI
+                // 如果是自动暂停(失败导致)，nextSpeaker指向失败的AI，应该让它重试
+                // 如果是手动暂停，nextSpeaker指向下一个应该发言的AI，保持不变
                 
                 this.updateUI();
                 this.runDialogue();
@@ -1222,7 +1219,8 @@
                 this.enableCompression = this.elements.enableCompression.checked;
                 this.compressionRatio = parseFloat(this.elements.compressionRatio.value) || 0.5;
                 this.keepRecentCount = parseInt(this.elements.keepRecentCount.value) || 5;
-                this.retryCount = parseInt(this.elements.retryCount.value) || 3;
+                this.retryCount = parseInt(this.elements.retryCount.value);
+                if (isNaN(this.retryCount) || this.retryCount < 0) this.retryCount = 0;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
                 // 直接开始对话，AI B 响应
@@ -1798,7 +1796,7 @@
                     this.showMessage('只有在暂停状态才能重试', 'error');
                     return;
                 }
-                
+
                 // 检查是否有AI正在工作
                 if (this.isAIWorking) {
                     this.showMessage('请等待当前AI完成工作后再重试', 'error');
@@ -1806,20 +1804,19 @@
                 }
 
                 const wasManuallyPaused = this.isPausedManually;
-                
+
                 // 检查是否有上一条消息
                 if (this.conversations.length === 0) {
                     this.showMessage('没有可重试的消息', 'error');
                     return;
                 }
 
-                // 确定要重试的AI - 应该是nextSpeaker，而不是切换后的
-                // nextSpeaker已经指向应该发言的AI
+                // 确定要重试的AI - 应该使用nextSpeaker（它指向了应该发言的AI）
                 const aiToRetry = this.nextSpeaker;
-                
+
                 // 移除最后一条失败的消息（如果有）
                 const lastConv = this.conversations[this.conversations.length - 1];
-                
+
                 // 如果最后一条消息是错误消息，删除它
                 if (lastConv.content.includes('❌')) {
                     this.conversations.pop();
@@ -1871,8 +1868,9 @@
                             this.isPaused = false;
                             this.isPausedManually = false;
                             this.updateUI();
-                            
-                            // 切换到下一个发言者并继续对话
+
+                            // 重试成功后，切换到对方AI继续发言
+                            // 例如：AIB重试成功后，nextSpeaker从B切换到A
                             this.nextSpeaker = this.nextSpeaker === 'A' ? 'B' : 'A';
                             this.currentRound++;
                             this.updateRoundCounter();
