@@ -495,6 +495,96 @@
             color: #1976d2;
         }
 
+        /* 消息操作按钮样式 */
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .message-action-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+
+        .message-action-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .message-action-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .message-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .message-action-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+
+        .btn-retry {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .btn-retry:hover:not(:disabled) {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        }
+
+        .btn-copy {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .btn-copy:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2980b9 0%, #1f618d 100%);
+        }
+
+        /* 按钮图标样式 */
+        .message-action-btn .btn-icon {
+            font-size: 14px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .message-action-btn .btn-text {
+            position: relative;
+            z-index: 1;
+        }
+
         /* Tab导航样式 */
         .config-tabs {
             display: flex;
@@ -755,6 +845,71 @@
         </div>
     </div>
     <script>
+        /**
+         * 消息对象模型
+         */
+        class Message {
+            constructor({ id, speaker, role, content, status = 'completed', timestamp = Date.now() }) {
+                this.id = id || `msg_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+                this.speaker = speaker;
+                this.role = role;
+                this.content = content;
+                this.status = status; // 'loading', 'streaming', 'completed', 'error'
+                this.timestamp = timestamp;
+                this.isCompressed = false;
+                this.compressedContent = null;
+                this.compressionIndex = null;
+            }
+
+            // 标记为压缩消息
+            markAsCompressed(compressedContent, compressionIndex) {
+                this.isCompressed = true;
+                this.compressedContent = compressedContent;
+                this.compressionIndex = compressionIndex;
+            }
+
+            // 更新消息内容
+            updateContent(content) {
+                this.content = content;
+            }
+
+            // 更新消息状态
+            updateStatus(status) {
+                this.status = status;
+            }
+
+            // 获取用于API的内容（压缩后的内容或原始内容）
+            getAPIContent() {
+                return this.isCompressed ? this.compressedContent : this.content;
+            }
+
+            // 转换为旧格式（用于向后兼容）
+            toLegacyFormat() {
+                return {
+                    role: this.role,
+                    content: this.content,
+                    speaker: this.speaker,
+                    isCompressed: this.isCompressed,
+                    compressedContent: this.compressedContent,
+                    compressionIndex: this.compressionIndex
+                };
+            }
+
+            // 从旧格式创建消息对象
+            static fromLegacyFormat(legacy) {
+                const msg = new Message({
+                    speaker: legacy.speaker,
+                    role: legacy.role,
+                    content: legacy.content,
+                    status: 'completed'
+                });
+                if (legacy.isCompressed) {
+                    msg.markAsCompressed(legacy.compressedContent, legacy.compressionIndex);
+                }
+                return msg;
+            }
+        }
+
         class AIDialogueSystem {
             constructor() {
                 this.conversations = [];
@@ -1062,7 +1217,24 @@
                 // 构建消息内容
                 const contentHTML = `<div class="message-content">${isStreaming ? content : marked.parse(content)}</div>`;
                 
-                messageDiv.innerHTML = headerHTML + contentHTML;
+                // 构建消息操作按钮（仅对AI消息显示）
+                let actionsHTML = '';
+                if (speaker.startsWith('AI')) {
+                    actionsHTML = `
+                        <div class="message-actions" style="display: none;">
+                            <button class="message-action-btn btn-retry" onclick="window.aiDialogue.retryMessage('${newMessageId}')" title="重新生成这条消息">
+                                <span class="btn-icon">🔄</span>
+                                <span class="btn-text">重试</span>
+                            </button>
+                            <button class="message-action-btn btn-copy" onclick="window.aiDialogue.copyMessage('${newMessageId}')" title="复制到剪贴板">
+                                <span class="btn-icon">📋</span>
+                                <span class="btn-text">复制</span>
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                messageDiv.innerHTML = headerHTML + contentHTML + actionsHTML;
 
                 // 如果是压缩消息，存储压缩相关数据
                 if (isCompressedMessage && messageData.compressedContent) {
@@ -1206,12 +1378,14 @@
                 this.elements.openingMessage.value = '';
 
                 // AI A 本地发出开场白（不调用API）
-                this.addMessageToUI('AI A', message);
-                this.conversations.push({
+                const openingMsg = new Message({
+                    speaker: 'AI A',
                     role: 'assistant',
                     content: message,
-                    speaker: 'AI A'
+                    status: 'completed'
                 });
+                this.addMessageToUI('AI A', message);
+                this.conversations.push(openingMsg);
 
                 // 设置对话参数
                 this.maxRounds = parseInt(this.elements.maxRounds.value) || 0;
@@ -1307,12 +1481,14 @@
 
                         if (response && response.content) {
                             // 流式响应在makeAPIRequest中已经实时更新了UI
-                            // 这里只需要添加到对话历史中
-                            this.conversations.push({
+                            // 创建新的消息对象并添加到对话历史中
+                            const newMessage = new Message({
+                                speaker: `AI ${aiType}`,
                                 role: 'assistant',
                                 content: response.content,
-                                speaker: `AI ${aiType}`
+                                status: 'completed'
                             });
+                            this.conversations.push(newMessage);
 
                             // 在新消息添加后，检查并更新压缩图标
                             setTimeout(() => {
@@ -1762,7 +1938,7 @@
 
                 // 显示/隐藏按钮
                 this.elements.pauseResumeChat.style.display = (isRunning || isPaused) ? 'inline-block' : 'none';
-                this.elements.retryChat.style.display = isPaused ? 'inline-block' : 'none';
+                this.elements.retryChat.style.display = 'none'; // 隐藏全局重试按钮，使用每条消息的重试按钮
 
                 // 更新暂停/继续按钮的文字和样式
                 if (isPaused) {
@@ -1775,11 +1951,6 @@
                     this.elements.pauseResumeChat.className = 'btn btn-warning';
                     this.elements.pauseResumeChat.disabled = false;
                 }
-                
-                // 如果AI正在工作，禁用重试按钮
-                if (isPaused) {
-                    this.elements.retryChat.disabled = this.isAIWorking;
-                }
 
                 // 更新状态指示器
                 if (isRunning) {
@@ -1788,6 +1959,184 @@
                     this.setStatus('暂停', 'stopped');
                 } else {
                     this.setStatus('就绪', 'ready');
+                }
+
+                // 更新所有消息的操作按钮显示/隐藏
+                this.updateMessageActions(isPaused);
+            }
+
+            /**
+             * 更新所有消息的操作按钮显示状态
+             * @param {boolean} show - 是否显示操作按钮
+             */
+            updateMessageActions(show) {
+                const messageActions = document.querySelectorAll('.message-actions');
+                messageActions.forEach(actions => {
+                    actions.style.display = show ? 'flex' : 'none';
+                });
+            }
+
+            /**
+             * 重试指定消息
+             * @param {string} messageId - 消息DOM元素的ID
+             */
+            async retryMessage(messageId) {
+                if (!this.isPaused) {
+                    this.showMessage('只有在暂停状态才能重试', 'error');
+                    return;
+                }
+
+                if (this.isAIWorking) {
+                    this.showMessage('请等待当前AI完成工作后再重试', 'error');
+                    return;
+                }
+
+                // 查找消息在conversations数组中的索引
+                const messageElement = document.getElementById(messageId);
+                if (!messageElement) {
+                    this.showMessage('未找到消息元素', 'error');
+                    return;
+                }
+
+                // 获取消息索引（通过计算DOM位置）
+                const allMessages = Array.from(this.elements.chatMessages.querySelectorAll('.message'));
+                const messageIndex = allMessages.indexOf(messageElement);
+                
+                if (messageIndex < 0 || messageIndex >= this.conversations.length) {
+                    this.showMessage('无法确定消息位置', 'error');
+                    return;
+                }
+
+                // 获取要重试的消息
+                const messageToRetry = this.conversations[messageIndex];
+                if (!messageToRetry || !messageToRetry.speaker.startsWith('AI')) {
+                    this.showMessage('只能重试AI消息', 'error');
+                    return;
+                }
+
+                // 确定AI类型
+                const aiType = messageToRetry.speaker === 'AI A' ? 'A' : 'B';
+
+                this.addSystemMessage(`🔄 重试 ${messageToRetry.speaker} 的消息...`, 'info');
+
+                // 临时移除该消息及之后的所有消息
+                const messagesAfter = this.conversations.splice(messageIndex);
+                // messagesAfter[0] 是要重试的消息，[1...]是它之后的消息
+                const followingMessages = messagesAfter.slice(1);
+
+                // 执行重试
+                this.isAIWorking = true;
+                this.updateUI();
+
+                try {
+                    const config = this.getAIConfig(aiType);
+                    const messages = await this.buildMessages(aiType, true);
+
+                    // 直接在原消息DOM上显示loading状态
+                    const contentElement = messageElement.querySelector('.message-content');
+                    if (contentElement) {
+                        contentElement.innerHTML = `
+                            <div class="typing-indicator">
+                                正在思考中
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                                <div class="typing-dot"></div>
+                            </div>
+                        `;
+                    }
+                    messageElement.classList.add('message-loading');
+
+                    // 使用原消息的ID进行流式更新
+                    this.currentStreamingMessageId = messageId;
+
+                    this.setStatus('重试中', 'running');
+                    const response = await this.makeAPIRequest(config, messages, `AI ${aiType}`, messageId);
+
+                    if (response && response.content) {
+                        // 创建新的消息对象
+                        const newMessage = new Message({
+                            speaker: `AI ${aiType}`,
+                            role: 'assistant',
+                            content: response.content,
+                            status: 'completed'
+                        });
+
+                        // 在原位置插入新消息：先添加重试消息，再恢复后续消息
+                        this.conversations.push(newMessage);
+                        this.conversations.push(...followingMessages);
+
+                        this.currentStreamingMessageId = null;
+                        this.isAIWorking = false;
+                        this.addSystemMessage('✅ 重试成功', 'success');
+                        this.setStatus('暂停', 'stopped');
+                        this.updateUI();
+                    } else {
+                        throw new Error('响应内容为空');
+                    }
+                } catch (error) {
+                    console.error(`重试失败:`, error);
+
+                    // 恢复原消息及后续消息
+                    this.conversations.push(...messagesAfter);
+
+                    // 在原消息上显示错误信息
+                    const contentElement = messageElement.querySelector('.message-content');
+                    if (contentElement) {
+                        contentElement.innerHTML = marked.parse(`❌ 重试失败: ${error.message}`);
+                    }
+                    messageElement.classList.remove('message-loading');
+
+                    this.showMessage(`重试失败: ${error.message}`, 'error');
+                    this.setStatus('暂停', 'stopped');
+                    this.currentStreamingMessageId = null;
+                    this.isAIWorking = false;
+                    this.updateUI();
+                }
+            }
+
+            /**
+             * 复制消息内容到剪贴板
+             * @param {string} messageId - 消息DOM元素的ID
+             */
+            async copyMessage(messageId) {
+                const messageElement = document.getElementById(messageId);
+                if (!messageElement) {
+                    this.showMessage('未找到消息元素', 'error');
+                    return;
+                }
+
+                // 查找对应的消息在conversations数组中的索引
+                const allMessages = Array.from(this.elements.chatMessages.querySelectorAll('.message'));
+                const messageIndex = allMessages.indexOf(messageElement);
+                
+                if (messageIndex < 0 || messageIndex >= this.conversations.length) {
+                    this.showMessage('无法确定消息位置', 'error');
+                    return;
+                }
+
+                // 获取完整的原始内容（而不是压缩后的内容）
+                const originalMessage = this.conversations[messageIndex];
+                const fullContent = originalMessage.content; // 始终使用完整内容
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(fullContent);
+                        this.showMessage('已复制完整内容到剪贴板', 'success');
+                    } else {
+                        // 降级方案：使用传统的复制方法
+                        const textarea = document.createElement('textarea');
+                        textarea.value = fullContent;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        this.showMessage('已复制完整内容到剪贴板', 'success');
+                    }
+                } catch (error) {
+                    console.error('复制失败:', error);
+                    this.showMessage('复制失败', 'error');
                 }
             }
 
@@ -1845,12 +2194,14 @@
                     const response = await this.makeAPIRequest(config, messages, `AI ${aiToRetry}`, loadingMessageId);
 
                     if (response && response.content) {
-                        // 重试成功
-                        this.conversations.push({
+                        // 重试成功 - 创建新的消息对象
+                        const newMessage = new Message({
+                            speaker: `AI ${aiToRetry}`,
                             role: 'assistant',
                             content: response.content,
-                            speaker: `AI ${aiToRetry}`
+                            status: 'completed'
                         });
+                        this.conversations.push(newMessage);
 
                         this.currentStreamingMessageId = null;
                         this.isAIWorking = false;
@@ -2361,6 +2712,30 @@
             }
 
             /**
+             * 从指定索引开始重新渲染消息
+             * @param {number} startIndex - 开始索引
+             */
+            rerenderMessagesFromIndex(startIndex) {
+                const messagesContainer = this.elements.chatMessages;
+                const allMessageElements = Array.from(messagesContainer.querySelectorAll('.message'));
+
+                // 删除从startIndex开始的所有DOM元素
+                for (let i = startIndex; i < allMessageElements.length; i++) {
+                    if (allMessageElements[i]) {
+                        allMessageElements[i].remove();
+                    }
+                }
+
+                // 重新渲染从startIndex开始的消息
+                for (let i = startIndex; i < this.conversations.length; i++) {
+                    const conv = this.conversations[i];
+                    this.addMessageToUI(conv.speaker, conv.content, false, null, conv);
+                }
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            /**
              * 更新消息的压缩图标显示
              * @param {number} messageIndex - 消息在conversations数组中的索引
              */
@@ -2557,9 +2932,15 @@
                             this.lastCompressionIndex = targetCompressIndex + 1;
                             
                             // 标记原消息已被压缩（用于UI显示）
-                            conversations[targetCompressIndex].isCompressed = true;
-                            conversations[targetCompressIndex].compressedContent = compressedContent;
-                            conversations[targetCompressIndex].compressionIndex = targetCompressIndex;
+                            const targetMsg = conversations[targetCompressIndex];
+                            if (targetMsg instanceof Message) {
+                                targetMsg.markAsCompressed(compressedContent, targetCompressIndex);
+                            } else {
+                                // 向后兼容旧格式
+                                targetMsg.isCompressed = true;
+                                targetMsg.compressedContent = compressedContent;
+                                targetMsg.compressionIndex = targetCompressIndex;
+                            }
                             
                             // 立即更新UI显示压缩图标（延迟执行确保DOM已更新）
                             setTimeout(() => {
@@ -2573,9 +2954,15 @@
                     } else {
                         // 使用缓存的压缩结果
                         const cachedCompressed = this.compressionCache.get(cacheKey);
-                        conversations[targetCompressIndex].isCompressed = true;
-                        conversations[targetCompressIndex].compressedContent = cachedCompressed;
-                        conversations[targetCompressIndex].compressionIndex = targetCompressIndex;
+                        const targetMsg = conversations[targetCompressIndex];
+                        if (targetMsg instanceof Message) {
+                            targetMsg.markAsCompressed(cachedCompressed, targetCompressIndex);
+                        } else {
+                            // 向后兼容旧格式
+                            targetMsg.isCompressed = true;
+                            targetMsg.compressedContent = cachedCompressed;
+                            targetMsg.compressionIndex = targetCompressIndex;
+                        }
                         
                         // 立即更新UI显示压缩图标（延迟执行确保DOM已更新）
                         setTimeout(() => {
@@ -2637,6 +3024,18 @@
              */
             async compressTargetMessage(targetMessage, contextMessages, targetIndex) {
                 try {
+                    const contentLength = targetMessage.content.length;
+                    if (contentLength < 50) {
+                        console.log(`⏭️ 跳过压缩：消息 ${targetIndex} 字数过少 (${contentLength}字)`);
+                        this.addSystemMessage(
+                            `⏭️ 消息 ${targetIndex + 1} 字数较少(${contentLength}字)，跳过压缩`,
+                            'info'
+                        );
+                        
+                        // 返回原始内容，不进行压缩
+                        return targetMessage.content;
+                    }
+                    
                     // 计算原始Token数量
                     const originalTokenCount = this.estimateTokens(targetMessage.content);
                     
