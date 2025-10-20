@@ -33,7 +33,9 @@
             background: #f8f9fa;
             border-right: 1px solid #e9ecef;
             padding: 20px;
+            padding-top: 0; /* 移除顶部padding,为粘性区域腾出空间 */
             overflow-y: auto;
+            position: relative;
         }
 
         .config-section {
@@ -42,6 +44,25 @@
             padding: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 粘性操作区域 */
+        .config-section.sticky-actions {
+            position: sticky;
+            top: 61px; /* Tab导航高度(padding-top 20px + 内容高度约41px) */
+            z-index: 10;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* 当粘性区域处于固定状态时增强阴影效果 */
+        .config-section.sticky-actions.is-stuck {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .config-title {
@@ -590,6 +611,22 @@
             display: flex;
             margin-bottom: 15px;
             border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: #f8f9fa;
+            margin-top: 0;
+            padding-top: 20px;
+            margin-left: -20px;
+            margin-right: -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        /* Tab处于粘性状态时的阴影效果 */
+        .config-tabs.is-stuck {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .tab-button {
@@ -687,21 +724,15 @@
             <!-- Tab内容容器 -->
             <div class="tab-content" id="ai-config" style="display: block;">
                 <!-- 操作按钮 -->
-                <div class="config-section">
+                <div class="config-section sticky-actions">
                     <div class="config-title">操作</div>
                     <button class="btn btn-warning" id="pauseResumeChat">暂停</button>
-                    <button class="btn btn-primary" id="exportChat">导出对话</button>
-                    <button class="btn btn-danger" id="clearChat">清除对话</button>
-                    <button class="btn btn-warning" id="retryChat" style="display:none;">重试</button>
-                </div>
-
-                <!-- 配置管理 -->
-                <div class="config-section">
-                    <div class="config-title">配置管理</div>
                     <button class="btn btn-primary" id="saveConfig">保存配置</button>
-                    <button class="btn btn-primary" id="exportConfig">导出</button>
-                    <button class="btn btn-success" id="importConfig">导入</button>
+                    <button class="btn btn-primary" id="exportConfig">导出配置</button>
+                    <button class="btn btn-primary" id="importConfig">导入配置</button>
                     <input type="file" id="importConfigFile" accept=".json" style="display: none;">
+                    <button class="btn btn-warning" id="exportChat">导出对话</button>
+                    <button class="btn btn-danger" id="clearChat">清屏</button>
                 </div>
 
                 <!-- AI A 配置 -->
@@ -806,7 +837,7 @@
             <!-- 代理配置Tab内容 -->
             <div class="tab-content" id="proxy-config" style="display: none;">
                 <!-- 代理管理操作 -->
-                <div class="config-section">
+                <div class="config-section sticky-actions">
                     <div class="config-title">代理管理</div>
                     <button class="btn btn-primary" id="addProxy">新增代理</button>
                     <button class="btn btn-primary" id="saveProxyConfig">保存代理配置</button>
@@ -964,7 +995,8 @@
                 this.loadConfiguration();
                 this.setupEventListeners();
                 this.updateUI();
-                
+                this.setupStickyActions(); // 设置粘性操作区域
+
                 // 设置全局引用以便在onclick中访问
                 window.aiDialogue = this;
             }
@@ -999,7 +1031,6 @@
                     pauseResumeChat: document.getElementById('pauseResumeChat'),
                     exportChat: document.getElementById('exportChat'),
                     clearChat: document.getElementById('clearChat'),
-                    retryChat: document.getElementById('retryChat'),
                     sendOpening: document.getElementById('sendOpening'),
 
                     // Tab和代理相关元素
@@ -1012,6 +1043,45 @@
                     importConfig: document.getElementById('importConfig'),
                     importConfigFile: document.getElementById('importConfigFile')
                 };
+            }
+
+            /**
+             * 设置粘性操作区域的滚动监听
+             */
+            setupStickyActions() {
+                const configPanel = document.querySelector('.config-panel');
+                const configTabs = document.querySelector('.config-tabs');
+                const stickyElements = document.querySelectorAll('.sticky-actions');
+
+                if (!configPanel) return;
+
+                // 监听配置面板的滚动
+                configPanel.addEventListener('scroll', () => {
+                    const parentRect = configPanel.getBoundingClientRect();
+
+                    // 检查Tab导航是否处于粘性状态
+                    if (configTabs) {
+                        const tabsRect = configTabs.getBoundingClientRect();
+                        if (tabsRect.top <= parentRect.top) {
+                            configTabs.classList.add('is-stuck');
+                        } else {
+                            configTabs.classList.remove('is-stuck');
+                        }
+                    }
+
+                    // 检查操作区域是否处于粘性状态
+                    stickyElements.forEach(element => {
+                        const rect = element.getBoundingClientRect();
+                        // 操作区域需要考虑Tab的高度
+                        const stickyTop = parentRect.top + 61; // Tab高度
+
+                        if (rect.top <= stickyTop) {
+                            element.classList.add('is-stuck');
+                        } else {
+                            element.classList.remove('is-stuck');
+                        }
+                    });
+                });
             }
 
             setupEventListeners() {
@@ -1028,7 +1098,6 @@
                 this.elements.pauseResumeChat.addEventListener('click', () => this.togglePauseResume());
                 this.elements.exportChat.addEventListener('click', () => this.exportDialogue());
                 this.elements.clearChat.addEventListener('click', () => this.clearDialogue());
-                this.elements.retryChat.addEventListener('click', () => this.retryLastRequest());
                 this.elements.sendOpening.addEventListener('click', () => this.sendOpeningMessage());
 
                 // Tab切换事件
@@ -1176,8 +1245,8 @@
                     }
                 }
 
-                // 创建新消息
-                const newMessageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                // 创建新消息 - 优先使用messageData中的id
+                const newMessageId = (messageData && messageData.id) ? messageData.id : ('msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
                 const messageDiv = document.createElement('div');
 
                 const isAIB = speaker === 'AI B';
@@ -1309,12 +1378,12 @@
                     this.showMessage('请等待当前AI完成工作后再继续', 'error');
                     return;
                 }
-                
+
                 const wasManuallyPaused = this.isPausedManually;
-                
+
                 this.isPaused = false;
                 this.isPausedManually = false; // 清除手动暂停标记
-                
+
                 // 如果达到最大会话数，开启新一轮
                 if (this.needsReset) {
                     this.currentRound = 0;
@@ -1334,11 +1403,13 @@
                 if (isNaN(this.retryCount) || this.retryCount < 0) this.retryCount = 0;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
-                // 无论是自动暂停还是手动暂停，都不修改nextSpeaker
-                // 因为nextSpeaker始终指向下一个应该发言的AI
-                // 如果是自动暂停(失败导致)，nextSpeaker指向失败的AI，应该让它重试
-                // 如果是手动暂停，nextSpeaker指向下一个应该发言的AI，保持不变
-                
+                // 如果不是手动暂停（即因为AI调用失败导致的自动暂停），则切换到下一个AI
+                // 这样可以确保当一个AI失败后，点击继续会切换到另一个AI
+                if (!wasManuallyPaused) {
+                    this.nextSpeaker = this.nextSpeaker === 'A' ? 'B' : 'A';
+                    this.addSystemMessage(`💡 自动切换到 AI ${this.nextSpeaker}`, 'info');
+                }
+
                 this.updateUI();
                 this.runDialogue();
             }
@@ -1378,13 +1449,14 @@
                 this.elements.openingMessage.value = '';
 
                 // AI A 本地发出开场白（不调用API）
+                const messageId = this.addMessageToUI('AI A', message);
                 const openingMsg = new Message({
+                    id: messageId,
                     speaker: 'AI A',
                     role: 'assistant',
                     content: message,
                     status: 'completed'
                 });
-                this.addMessageToUI('AI A', message);
                 this.conversations.push(openingMsg);
 
                 // 设置对话参数
@@ -1481,8 +1553,9 @@
 
                         if (response && response.content) {
                             // 流式响应在makeAPIRequest中已经实时更新了UI
-                            // 创建新的消息对象并添加到对话历史中
+                            // 创建新的消息对象并添加到对话历史中，使用DOM中的messageId
                             const newMessage = new Message({
+                                id: loadingMessageId,
                                 speaker: `AI ${aiType}`,
                                 role: 'assistant',
                                 content: response.content,
@@ -1517,18 +1590,30 @@
                             await this.sleep(this.retryDelay);
                         } else {
                             // 重试次数用完，显示错误消息，并自动进入暂停状态
-                            this.addMessageToUI(`AI ${aiType}`, `❌ 调用失败，已达重试上限: ${error.message}`, false, loadingMessageId);
+                            const errorContent = `❌ 调用失败，已达重试上限: ${error.message}`;
+                            this.addMessageToUI(`AI ${aiType}`, errorContent, false, loadingMessageId);
+
+                            // 将失败消息也添加到conversations数组中，这样才能被重试
+                            const errorMessage = new Message({
+                                id: loadingMessageId,
+                                speaker: `AI ${aiType}`,
+                                role: 'assistant',
+                                content: errorContent,
+                                status: 'error'
+                            });
+                            this.conversations.push(errorMessage);
+
                             this.showMessage(`AI ${aiType} 调用失败，已达重试上限，系统已自动暂停`, 'error');
                             this.setStatus('暂停', 'stopped');
                             this.currentStreamingMessageId = null;
-                            
+
                             // 自动进入暂停状态（非手动暂停）
                             this.isPaused = true;
                             this.isPausedManually = false;
                             // 清除AI工作标志
                             this.isAIWorking = false;
                             this.updateUI();
-                            
+
                             return false;
                         }
                     }
@@ -1938,7 +2023,6 @@
 
                 // 显示/隐藏按钮
                 this.elements.pauseResumeChat.style.display = (isRunning || isPaused) ? 'inline-block' : 'none';
-                this.elements.retryChat.style.display = 'none'; // 隐藏全局重试按钮，使用每条消息的重试按钮
 
                 // 更新暂停/继续按钮的文字和样式
                 if (isPaused) {
@@ -1998,11 +2082,10 @@
                     return;
                 }
 
-                // 获取消息索引（通过计算DOM位置）
-                const allMessages = Array.from(this.elements.chatMessages.querySelectorAll('.message'));
-                const messageIndex = allMessages.indexOf(messageElement);
-                
-                if (messageIndex < 0 || messageIndex >= this.conversations.length) {
+                // 通过消息ID在conversations数组中查找索引
+                const messageIndex = this.conversations.findIndex(msg => msg.id === messageId);
+
+                if (messageIndex < 0) {
                     this.showMessage('无法确定消息位置', 'error');
                     return;
                 }
@@ -2053,8 +2136,9 @@
                     const response = await this.makeAPIRequest(config, messages, `AI ${aiType}`, messageId);
 
                     if (response && response.content) {
-                        // 创建新的消息对象
+                        // 创建新的消息对象，使用原有的messageId
                         const newMessage = new Message({
+                            id: messageId,
                             speaker: `AI ${aiType}`,
                             role: 'assistant',
                             content: response.content,
@@ -2105,17 +2189,15 @@
                     return;
                 }
 
-                // 查找对应的消息在conversations数组中的索引
-                const allMessages = Array.from(this.elements.chatMessages.querySelectorAll('.message'));
-                const messageIndex = allMessages.indexOf(messageElement);
-                
-                if (messageIndex < 0 || messageIndex >= this.conversations.length) {
+                // 通过消息ID在conversations数组中查找
+                const originalMessage = this.conversations.find(msg => msg.id === messageId);
+
+                if (!originalMessage) {
                     this.showMessage('无法确定消息位置', 'error');
                     return;
                 }
 
                 // 获取完整的原始内容（而不是压缩后的内容）
-                const originalMessage = this.conversations[messageIndex];
                 const fullContent = originalMessage.content; // 始终使用完整内容
 
                 try {
@@ -2194,8 +2276,9 @@
                     const response = await this.makeAPIRequest(config, messages, `AI ${aiToRetry}`, loadingMessageId);
 
                     if (response && response.content) {
-                        // 重试成功 - 创建新的消息对象
+                        // 重试成功 - 创建新的消息对象，使用loadingMessageId
                         const newMessage = new Message({
+                            id: loadingMessageId,
                             speaker: `AI ${aiToRetry}`,
                             role: 'assistant',
                             content: response.content,
