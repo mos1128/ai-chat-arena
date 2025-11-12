@@ -1388,6 +1388,7 @@
                 if (this.needsReset) {
                     this.currentRound = 0;
                     this.needsReset = false;
+                    // 保持nextSpeaker不变，确保继续对话时轮到正确的AI
                     this.addSystemMessage('🔄 开启新一轮对话', 'success');
                 } else {
                     this.addSystemMessage('▶️ 继续对话', 'success');
@@ -1469,6 +1470,10 @@
                 if (isNaN(this.retryCount) || this.retryCount < 0) this.retryCount = 0;
                 this.retryDelay = parseInt(this.elements.retryDelay.value) * 1000 || 2000;
 
+                // 开场白计入第一轮，设置当前轮次为1
+                this.currentRound = 1;
+                this.updateRoundCounter();
+
                 // 直接开始对话，AI B 响应
                 this.isRunning = true;
                 this.isPaused = false;
@@ -1484,6 +1489,8 @@
                     if (this.maxRounds > 0 && this.currentRound >= this.maxRounds) {
                         this.isPaused = true;
                         this.needsReset = true;
+                        // 达到上限时，提前切换nextSpeaker，这样继续时会轮到正确的AI
+                        this.nextSpeaker = this.nextSpeaker === 'A' ? 'B' : 'A';
                         this.updateUI();
                         break;
                     }
@@ -1506,7 +1513,7 @@
                     // 添加延迟避免过快请求
                     await this.sleep(1000);
                 }
-                
+
                 // 对话结束后，更新所有消息的压缩图标显示
                 this.updateAllCompressionIcons();
             }
