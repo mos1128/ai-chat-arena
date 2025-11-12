@@ -709,6 +709,59 @@
             margin-bottom: 0;
         }
 
+        /* 提示词配置项样式 */
+        .prompt-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .prompt-item:hover {
+            border-color: #28a745;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
+        }
+
+        .prompt-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .prompt-item-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .prompt-item-content {
+            margin-bottom: 15px;
+        }
+
+        .prompt-item-description {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .prompt-item-text {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 100px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
 
     </style>
 </head>
@@ -718,6 +771,7 @@
             <!-- Tab切换导航 -->
             <div class="config-tabs">
                 <button class="tab-button active" data-tab="ai-config">AI配置</button>
+                <button class="tab-button" data-tab="prompt-config">提示词配置</button>
                 <button class="tab-button" data-tab="proxy-config">代理配置</button>
             </div>
 
@@ -746,6 +800,13 @@
                         <div class="api-hint">从代理配置页面中选择一个已配置的代理</div>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">选择提示词</label>
+                        <select class="form-select" id="promptSelectA">
+                            <option value="">请选择提示词配置</option>
+                        </select>
+                        <div class="api-hint">从提示词配置页面中选择一个已配置的提示词</div>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">提示词</label>
                         <textarea class="form-textarea" id="promptA" placeholder="AI A的系统提示词"></textarea>
                     </div>
@@ -760,6 +821,13 @@
                             <option value="">请选择代理配置</option>
                         </select>
                         <div class="api-hint">从代理配置页面中选择一个已配置的代理</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">选择提示词</label>
+                        <select class="form-select" id="promptSelectB">
+                            <option value="">请选择提示词配置</option>
+                        </select>
+                        <div class="api-hint">从提示词配置页面中选择一个已配置的提示词</div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">提示词</label>
@@ -831,6 +899,21 @@
                     <div id="compressionStats" style="font-size: 12px; color: #666; line-height: 1.5;">
                         暂无压缩数据
                     </div>
+                </div>
+            </div>
+
+            <!-- 提示词配置Tab内容 -->
+            <div class="tab-content" id="prompt-config" style="display: none;">
+                <!-- 提示词管理操作 -->
+                <div class="config-section sticky-actions">
+                    <div class="config-title">提示词管理</div>
+                    <button class="btn btn-primary" id="addPrompt">新增提示词</button>
+                    <button class="btn btn-primary" id="savePromptConfig">保存提示词配置</button>
+                </div>
+
+                <!-- 提示词列表容器 -->
+                <div id="promptListContainer">
+                    <!-- 提示词配置项将动态插入这里 -->
                 </div>
             </div>
 
@@ -964,6 +1047,9 @@
                 // 代理配置相关
                 this.proxies = new Map(); // 存储所有代理配置
                 this.currentTab = 'ai-config'; // 当前激活的Tab
+
+                // 提示词配置相关
+                this.prompts = new Map(); // 存储所有提示词配置
                 
                 // 新增：跟踪每个AI当前的端点类型
                 this.currentEndpointTypes = {
@@ -991,7 +1077,9 @@
 
                 this.initializeElements();
                 this.loadProxyConfiguration(); // 先加载代理配置
+                this.loadPromptConfiguration(); // 加载提示词配置
                 this.updateProxySelectors(); // 更新代理下拉选择器
+                this.updatePromptSelectors(); // 更新提示词下拉选择器
                 this.loadConfiguration();
                 this.setupEventListeners();
                 this.updateUI();
@@ -1006,9 +1094,11 @@
                 this.elements = {
                     // AI配置（使用代理选择）
                     proxySelectA: document.getElementById('proxySelectA'),
+                    promptSelectA: document.getElementById('promptSelectA'),
                     promptA: document.getElementById('promptA'),
 
                     proxySelectB: document.getElementById('proxySelectB'),
+                    promptSelectB: document.getElementById('promptSelectB'),
                     promptB: document.getElementById('promptB'),
 
                     proxySelectSystem: document.getElementById('proxySelectSystem'),
@@ -1037,6 +1127,11 @@
                     addProxy: document.getElementById('addProxy'),
                     saveProxyConfig: document.getElementById('saveProxyConfig'),
                     proxyListContainer: document.getElementById('proxyListContainer'),
+
+                    // 提示词管理相关元素
+                    addPrompt: document.getElementById('addPrompt'),
+                    savePromptConfig: document.getElementById('savePromptConfig'),
+                    promptListContainer: document.getElementById('promptListContainer'),
 
                     // 配置导入导出
                     exportConfig: document.getElementById('exportConfig'),
@@ -1090,6 +1185,10 @@
                 this.elements.proxySelectB.addEventListener('change', () => this.updateProxySelectors());
                 this.elements.proxySelectSystem.addEventListener('change', () => this.updateProxySelectors());
 
+                // 提示词选择器变化事件（系统AI不再使用选择器）
+                this.elements.promptSelectA.addEventListener('change', () => this.updatePromptSelectors());
+                this.elements.promptSelectB.addEventListener('change', () => this.updatePromptSelectors());
+
                 // 压缩功能相关事件
                 this.elements.enableCompression.addEventListener('change', () => this.updateCompressionStatsUI());
 
@@ -1109,6 +1208,10 @@
                 this.elements.addProxy.addEventListener('click', () => this.addNewProxy());
                 this.elements.saveProxyConfig.addEventListener('click', () => this.saveProxyConfiguration());
 
+                // 提示词管理事件
+                this.elements.addPrompt.addEventListener('click', () => this.addNewPrompt());
+                this.elements.savePromptConfig.addEventListener('click', () => this.savePromptConfiguration());
+
                 // 配置导入导出事件
                 this.elements.exportConfig.addEventListener('click', () => this.exportConfiguration());
                 this.elements.importConfig.addEventListener('click', () => this.elements.importConfigFile.click());
@@ -1118,6 +1221,61 @@
                 this.elements.openingMessage.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') this.sendOpeningMessage();
                 });
+            }
+
+            /**
+             * 更新提示词选择器
+             */
+            updatePromptSelectors() {
+                const selectors = [
+                    this.elements.promptSelectA,
+                    this.elements.promptSelectB
+                    // 系统AI不再使用提示词选择器
+                ];
+
+                selectors.forEach(selector => {
+                    if (!selector) return;
+
+                    const currentValue = selector.value;
+
+                    // 清空现有选项，保留默认选项
+                    selector.innerHTML = '<option value="">请选择提示词配置</option>';
+
+                    // 添加提示词选项
+                    for (const [id, prompt] of this.prompts) {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = prompt.name;
+                        if (id === currentValue) {
+                            option.selected = true;
+                        }
+                        selector.appendChild(option);
+                    }
+                });
+
+                // 处理提示词选择变化（系统AI不再处理选择器变化）
+                this.handlePromptSelection();
+            }
+
+            /**
+             * 处理提示词选择
+             */
+            handlePromptSelection() {
+                // AI A 提示词选择
+                const promptIdA = this.elements.promptSelectA.value;
+                if (promptIdA && this.prompts.has(promptIdA)) {
+                    const prompt = this.prompts.get(promptIdA);
+                    this.elements.promptA.value = prompt.content;
+                }
+
+                // AI B 提示词选择
+                const promptIdB = this.elements.promptSelectB.value;
+                if (promptIdB && this.prompts.has(promptIdB)) {
+                    const prompt = this.prompts.get(promptIdB);
+                    this.elements.promptB.value = prompt.content;
+                }
+
+                // 系统AI不再使用提示词选择器，保持原有固定内容
             }
 
             /**
@@ -3725,14 +3883,27 @@
                 if (tabId === 'proxy-config') {
                     this.renderProxyList();
                 }
+
+                // 如果切换到提示词配置页面，刷新提示词列表
+                if (tabId === 'prompt-config') {
+                    this.renderPromptList();
+                }
             }
 
             /**
-             * 生成唯一ID
+             * 生成代理唯一ID
              * @returns {string} 唯一ID
              */
             generateId() {
                 return 'proxy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            }
+
+            /**
+             * 生成提示词唯一ID
+             * @returns {string} 唯一ID
+             */
+            generatePromptId() {
+                return 'prompt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             }
 
             /**
@@ -3969,6 +4140,157 @@
                 }
             }
 
+            /**
+             * 新增提示词
+             */
+            addNewPrompt() {
+                const promptId = this.generatePromptId();
+                const newPrompt = {
+                    id: promptId,
+                    name: '新提示词',
+                    content: ''
+                };
+
+                this.prompts.set(promptId, newPrompt);
+                this.renderPromptList();
+            }
+
+            /**
+             * 渲染提示词列表
+             */
+            renderPromptList() {
+                const container = this.elements.promptListContainer;
+
+                if (this.prompts.size === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 30px;">
+                            <p>暂无提示词配置</p>
+                            <p style="font-size: 12px;">点击"新增提示词"按钮添加第一个提示词</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                for (const [id, prompt] of this.prompts) {
+                    html += this.createPromptItemHTML(prompt);
+                }
+
+                container.innerHTML = html;
+                this.setupPromptItemListeners();
+            }
+
+            /**
+             * 创建提示词配置项HTML
+             * @param {Object} prompt - 提示词配置对象
+             * @returns {string} HTML字符串
+             */
+            createPromptItemHTML(prompt) {
+                return `
+                    <div class="prompt-item" data-prompt-id="${prompt.id}">
+                        <div class="prompt-item-header">
+                            <div class="prompt-item-title">${prompt.name}</div>
+                            <div class="prompt-item-actions">
+                                <button class="btn-small btn-danger" onclick="aiDialogue.deletePrompt('${prompt.id}')">删除</button>
+                            </div>
+                        </div>
+                        <div class="prompt-item-content">
+                            <div class="form-group">
+                                <label class="form-label">名称</label>
+                                <input type="text" class="form-input prompt-name" value="${prompt.name}" placeholder="提示词名称">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">提示词内容</label>
+                                <textarea class="form-textarea prompt-content" rows="6" placeholder="输入提示词内容">${prompt.content}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            /**
+             * 设置提示词配置项的事件监听
+             */
+            setupPromptItemListeners() {
+                // 删除提示词
+                document.querySelectorAll('.prompt-item').forEach(item => {
+                    const promptId = item.dataset.promptId;
+
+                    // 监听输入变化，实时更新数据
+                    const nameInput = item.querySelector('.prompt-name');
+                    const contentInput = item.querySelector('.prompt-content');
+
+                    if (nameInput) {
+                        nameInput.addEventListener('input', (e) => {
+                            const prompt = this.prompts.get(promptId);
+                            if (prompt) {
+                                prompt.name = e.target.value;
+                                item.querySelector('.prompt-item-title').textContent = e.target.value;
+                            }
+                        });
+                    }
+
+                    if (contentInput) {
+                        contentInput.addEventListener('input', (e) => {
+                            const prompt = this.prompts.get(promptId);
+                            if (prompt) {
+                                prompt.content = e.target.value;
+                            }
+                        });
+                    }
+                });
+            }
+
+            /**
+             * 删除提示词配置
+             * @param {string} promptId - 提示词ID
+             */
+            deletePrompt(promptId) {
+                if (confirm('确定要删除这个提示词配置吗？')) {
+                    this.prompts.delete(promptId);
+                    this.renderPromptList();
+                    this.updatePromptSelectors(); // 删除后更新选择器
+                }
+            }
+
+            /**
+             * 保存提示词配置
+             */
+            savePromptConfiguration() {
+                const promptsData = {};
+                for (const [id, prompt] of this.prompts) {
+                    promptsData[id] = prompt;
+                }
+
+                localStorage.setItem('aiDialoguePrompts', JSON.stringify(promptsData));
+                this.updatePromptSelectors(); // 保存后更新选择器
+                this.showMessage('提示词配置已保存', 'success');
+            }
+
+            /**
+             * 加载提示词配置
+             */
+            loadPromptConfiguration() {
+                const saved = localStorage.getItem('aiDialoguePrompts');
+                if (saved) {
+                    try {
+                        const promptsData = JSON.parse(saved);
+                        for (const [id, prompt] of Object.entries(promptsData)) {
+                            // 数据迁移：移除旧版本的description、tags、createdAt字段
+                            const cleanPrompt = {
+                                id: prompt.id,
+                                name: prompt.name || '未命名提示词',
+                                content: prompt.content || ''
+                            };
+                            this.prompts.set(id, cleanPrompt);
+                        }
+                        console.log('已加载提示词配置:', this.prompts.size, '个提示词');
+                    } catch (e) {
+                        console.warn('加载提示词配置失败:', e);
+                    }
+                }
+            }
+
             // ====== 配置导入导出功能 ======
 
             /**
@@ -3985,12 +4307,20 @@
                         aiConfig: JSON.parse(localStorage.getItem('aiDialogueConfig') || '{}'),
 
                         // 代理配置
-                        proxies: {}
+                        proxies: {},
+
+                        // 提示词配置
+                        prompts: {}
                     };
 
                     // 导出代理配置
                     for (const [id, proxy] of this.proxies) {
                         exportData.proxies[id] = proxy;
+                    }
+
+                    // 导出提示词配置
+                    for (const [id, prompt] of this.prompts) {
+                        exportData.prompts[id] = prompt;
                     }
 
                     // 创建下载文件
@@ -4044,10 +4374,21 @@
                         }
                         localStorage.setItem('aiDialogueProxies', JSON.stringify(importData.proxies));
 
+                        // 导入提示词配置
+                        if (importData.prompts) {
+                            this.prompts.clear();
+                            for (const [id, prompt] of Object.entries(importData.prompts)) {
+                                this.prompts.set(id, prompt);
+                            }
+                            localStorage.setItem('aiDialoguePrompts', JSON.stringify(importData.prompts));
+                        }
+
                         // 重新加载配置到UI
                         this.loadConfiguration();
                         this.updateProxySelectors();
+                        this.updatePromptSelectors();
                         this.renderProxyList();
+                        this.renderPromptList();
 
                         this.showMessage('配置导入成功', 'success');
 
